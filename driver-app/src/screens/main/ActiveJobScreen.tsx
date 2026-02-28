@@ -22,7 +22,9 @@ import {
   addJobListener,
   removeJobListener,
   getActiveJob,
+  setActiveJob,
   getNextStatusLabel,
+  getNextStatus,
 } from '../../store/jobStore';
 import Colors from '../../theme/colors';
 import { DeliveryJob } from '../../types';
@@ -65,13 +67,20 @@ export default function ActiveJobScreen({ navigation, route }: Props) {
 
   const handleAdvanceStatus = async () => {
     if (!job) return;
+    const nextStatus = getNextStatus(job.status);
+    if (!nextStatus) return;
+
     setIsAdvancing(true);
     try {
-      const updated = await api.updateJobStatus(job.id, job.status);
-      if (updated?.job?.status === 'delivered') {
+      const result = await api.updateJobStatus(job.id, nextStatus);
+      const updatedJob = result.job;
+      if (updatedJob.status === 'delivered') {
+        setActiveJob(null);
         Alert.alert('Delivery Complete', 'Great job! The package has been delivered.', [
           { text: 'OK', onPress: () => navigation.goBack() },
         ]);
+      } else {
+        setActiveJob(updatedJob);
       }
     } catch {
       Alert.alert('Error', 'Failed to update status.');

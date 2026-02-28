@@ -10,12 +10,16 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import api from '../../services/api';
 import Colors from '../../theme/colors';
 
 type DocumentItem = {
   key: string;
+  apiType: string; // maps to backend document type
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
   description: string;
@@ -23,29 +27,42 @@ type DocumentItem = {
 };
 
 const DOCUMENTS: DocumentItem[] = [
-  { key: 'drivers_license', label: "Driver's License", icon: 'card', description: 'Valid Philippine driver license (front & back)', required: true },
-  { key: 'or_cr', label: 'OR/CR', icon: 'document-text', description: 'Vehicle Official Receipt & Certificate of Registration', required: true },
-  { key: 'nbi_clearance', label: 'NBI Clearance', icon: 'clipboard', description: 'Valid NBI Clearance (not older than 6 months)', required: true },
-  { key: 'selfie', label: 'Selfie with ID', icon: 'person-circle', description: 'Clear selfie holding your driver license', required: true },
-  { key: 'vehicle_photo', label: 'Vehicle Photo', icon: 'bicycle', description: 'Clear photo of your vehicle (front & side)', required: false },
+  { key: 'drivers_license', apiType: 'license', label: "Driver's License", icon: 'card', description: 'Valid Philippine driver license (front & back)', required: true },
+  { key: 'or_cr', apiType: 'or_cr', label: 'OR/CR', icon: 'document-text', description: 'Vehicle Official Receipt & Certificate of Registration', required: true },
+  { key: 'nbi_clearance', apiType: 'nbi_clearance', label: 'NBI Clearance', icon: 'clipboard', description: 'Valid NBI Clearance (not older than 6 months)', required: true },
+  { key: 'selfie', apiType: 'selfie', label: 'Selfie with ID', icon: 'person-circle', description: 'Clear selfie holding your driver license', required: true },
 ];
 
 export default function DocumentUploadScreen() {
   const [uploaded, setUploaded] = useState<Record<string, boolean>>({});
+  const [uploading, setUploading] = useState<string | null>(null);
 
-  const handleUpload = (key: string) => {
-    // MOCK: Simulate document upload
-    Alert.alert(
-      'Upload Document',
-      'In production, this will open camera/gallery to upload your document.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Simulate Upload',
-          onPress: () => setUploaded(prev => ({ ...prev, [key]: true })),
-        },
-      ]
-    );
+  const handleUpload = async (key: string, apiType: string) => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.8,
+    });
+
+    if (result.canceled || !result.assets?.[0]) return;
+
+    const asset = result.assets[0];
+    const fileName = asset.uri.split('/').pop() ?? `${key}.jpg`;
+    const fileType = asset.mimeType ?? 'image/jpeg';
+
+    setUploading(key);
+    try {
+      await api.uploadDocument(apiType, {
+        uri: asset.uri,
+        name: fileName,
+        type: fileType,
+      });
+      setUploaded(prev => ({ ...prev, [key]: true }));
+    } catch {
+      Alert.alert('Upload Failed', 'Could not upload document. Please try again.');
+    } finally {
+      setUploading(null);
+    }
   };
 
   const allRequiredUploaded = DOCUMENTS.filter(d => d.required).every(d => uploaded[d.key]);
@@ -73,17 +90,24 @@ export default function DocumentUploadScreen() {
           </View>
           <TouchableOpacity
             style={[styles.uploadBtn, uploaded[doc.key] && styles.uploadedBtn]}
-            onPress={() => handleUpload(doc.key)}
+            onPress={() => handleUpload(doc.key, doc.apiType)}
+            disabled={uploading === doc.key}
           >
-            <Ionicons
-              name={uploaded[doc.key] ? 'checkmark-circle' : 'cloud-upload'}
-              size={16}
-              color={uploaded[doc.key] ? Colors.success : Colors.primary}
-              style={{ marginRight: 6 }}
-            />
-            <Text style={[styles.uploadBtnText, uploaded[doc.key] && styles.uploadedBtnText]}>
-              {uploaded[doc.key] ? 'Uploaded' : 'Upload'}
-            </Text>
+            {uploading === doc.key ? (
+              <ActivityIndicator size="small" color={Colors.primary} />
+            ) : (
+              <>
+                <Ionicons
+                  name={uploaded[doc.key] ? 'checkmark-circle' : 'cloud-upload'}
+                  size={16}
+                  color={uploaded[doc.key] ? Colors.success : Colors.primary}
+                  style={{ marginRight: 6 }}
+                />
+                <Text style={[styles.uploadBtnText, uploaded[doc.key] && styles.uploadedBtnText]}>
+                  {uploaded[doc.key] ? 'Uploaded' : 'Upload'}
+                </Text>
+              </>
+            )}
           </TouchableOpacity>
         </View>
       ))}

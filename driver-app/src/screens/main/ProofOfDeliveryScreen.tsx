@@ -13,8 +13,12 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import api from '../../services/api';
+import { setActiveJob } from '../../store/jobStore';
 import Colors from '../../theme/colors';
 
 type Props = {
@@ -23,41 +27,70 @@ type Props = {
 };
 
 export default function ProofOfDeliveryScreen({ navigation, route }: Props) {
+  const jobId = route.params?.jobId as number;
   const [recipientName, setRecipientName] = useState('');
-  const [photoTaken, setPhotoTaken] = useState(false);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [signatureDone, setSignatureDone] = useState(false);
   const [notes, setNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleTakePhoto = () => {
-    Alert.alert(
-      'Take Photo',
-      'In production, this opens the camera to capture a photo of the delivered package.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Simulate Photo', onPress: () => setPhotoTaken(true) },
-      ]
-    );
+  const handleTakePhoto = async () => {
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets?.[0]) {
+      setPhotoUri(result.assets[0].uri);
+    }
   };
 
   const handleSignature = () => {
+    // TODO: Integrate react-native-signature-canvas
     Alert.alert(
       'E-Signature',
-      'In production, this opens a signature pad for the recipient to sign.',
+      'Signature pad coming soon. Tap OK to mark as collected.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Simulate Signature', onPress: () => setSignatureDone(true) },
+        { text: 'OK', onPress: () => setSignatureDone(true) },
       ]
     );
   };
 
-  const canSubmit = recipientName.trim().length > 0 && photoTaken;
+  const canSubmit = recipientName.trim().length > 0 && !!photoUri;
 
-  const handleSubmit = () => {
-    Alert.alert(
-      'Delivery Confirmed',
-      `POD submitted successfully!\n\nRecipient: ${recipientName}\nPhoto: Captured\nSignature: ${signatureDone ? 'Yes' : 'No'}`,
-      [{ text: 'OK', onPress: () => navigation.goBack() }]
-    );
+  const handleSubmit = async () => {
+    if (!canSubmit || !photoUri) return;
+    setSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append('recipient_name', recipientName);
+      formData.append('notes', notes);
+      const fileName = photoUri.split('/').pop() ?? 'photo.jpg';
+      formData.append('photo', {
+        uri: photoUri,
+        name: fileName,
+        type: 'image/jpeg',
+      } as unknown as Blob);
+
+      await api.submitPod(jobId, formData);
+
+      // Mark job as delivered
+      try {
+        const result = await api.updateJobStatus(jobId, 'delivered');
+        setActiveJob(null);
+      } catch {
+        // POD submitted even if status update fails
+      }
+
+      Alert.alert('Delivery Confirmed', 'Proof of delivery submitted successfully.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+    } catch {
+      Alert.alert('Error', 'Failed to submit proof of delivery. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -83,12 +116,12 @@ export default function ProofOfDeliveryScreen({ navigation, route }: Props) {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Delivery Photo *</Text>
         <TouchableOpacity
-          style={[styles.captureBtn, photoTaken && styles.captureBtnDone]}
+          style={[styles.captureBtn, !!photoUri && styles.captureBtnDone]}
           onPress={handleTakePhoto}
         >
-          <Ionicons name={photoTaken ? 'checkmark-circle' : 'camera'} size={28} color={photoTaken ? Colors.success : Colors.textSecondary} style={{ marginRight: 14 }} />
-          <Text style={[styles.captureBtnText, photoTaken && styles.captureBtnTextDone]}>
-            {photoTaken ? 'Photo Captured' : 'Take Photo of Package'}
+          <Ionicons name={photoUri ? 'checkmark-circle' : 'camera'} size={28} color={photoUri ? Colors.success : Colors.textSecondary} style={{ marginRight: 14 }} />
+          <Text style={[styles.captureBtnText, !!photoUri && styles.captureBtnTextDone]}>
+            {photoUri ? 'Photo Captured' : 'Take Photo of Package'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -123,11 +156,15 @@ export default function ProofOfDeliveryScreen({ navigation, route }: Props) {
 
       {/* Submit */}
       <TouchableOpacity
-        style={[styles.submitBtn, !canSubmit && styles.submitBtnDisabled]}
-        disabled={!canSubmit}
+        style={[styles.submitBtn, (!canSubmit || submitting) && styles.submitBtnDisabled]}
+        disabled={!canSubmit || submitting}
         onPress={handleSubmit}
       >
-        <Text style={styles.submitBtnText}>Confirm Delivery</Text>
+        {submitting ? (
+          <ActivityIndicator color={Colors.textOnPrimary} />
+        ) : (
+          <Text style={styles.submitBtnText}>Confirm Delivery</Text>
+        )}
       </TouchableOpacity>
     </ScrollView>
   );

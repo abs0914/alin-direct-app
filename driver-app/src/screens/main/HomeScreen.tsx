@@ -27,12 +27,12 @@ import {
   startListeningForOffers,
   stopListeningForOffers,
   getActiveJob,
-  respondToOffer as storeRespondToOffer,
+  setActiveJob as storeSetActiveJob,
+  setCurrentOffer,
 } from '../../store/jobStore';
 import JobOfferModal from '../../components/JobOfferModal';
 import Colors from '../../theme/colors';
-import { DeliveryJob, JobOffer } from '../../types';
-import { MOCK_EARNINGS } from '../../data/mockData';
+import { DeliveryJob, EarningsSummary, JobOffer } from '../../types';
 
 type Props = {
   navigation: NativeStackNavigationProp<HomeStackParamList, 'HomeMain'>;
@@ -52,19 +52,46 @@ export default function HomeScreen({ navigation }: Props) {
   const [isOnline, setIsOnline] = useState(rider?.availability === 'online' || rider?.availability === 'on_job');
   const [isToggling, setIsToggling] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [currentOffer, setCurrentOffer] = useState<JobOffer | null>(null);
-  const [activeJob, setActiveJob] = useState<DeliveryJob | null>(getActiveJob());
+  const [currentOffer, setCurrentOfferState] = useState<JobOffer | null>(null);
+  const [activeJob, setActiveJobState] = useState<DeliveryJob | null>(getActiveJob());
+  const [earnings, setEarnings] = useState<EarningsSummary | null>(null);
+
+  // Load earnings from API
+  const loadEarnings = useCallback(async () => {
+    try {
+      const data = await api.getEarnings();
+      setEarnings(data);
+    } catch {
+      // Silently fail
+    }
+  }, []);
+
+  // Load active job from API
+  const loadActiveJob = useCallback(async () => {
+    try {
+      const job = await api.getActiveJob();
+      storeSetActiveJob(job);
+      setActiveJobState(job);
+    } catch {
+      // Silently fail
+    }
+  }, []);
+
+  useEffect(() => {
+    loadEarnings();
+    loadActiveJob();
+  }, [loadEarnings, loadActiveJob]);
 
   // Subscribe to offers
   useEffect(() => {
-    const offerListener = (offer: JobOffer | null) => setCurrentOffer(offer);
+    const offerListener = (offer: JobOffer | null) => setCurrentOfferState(offer);
     addOfferListener(offerListener);
     return () => removeOfferListener(offerListener);
   }, []);
 
   // Subscribe to active job changes
   useEffect(() => {
-    const jobListener = (job: DeliveryJob | null) => setActiveJob(job ? { ...job } : null);
+    const jobListener = (job: DeliveryJob | null) => setActiveJobState(job ? { ...job } : null);
     addJobListener(jobListener);
     return () => removeJobListener(jobListener);
   }, []);
@@ -74,8 +101,8 @@ export default function HomeScreen({ navigation }: Props) {
     try {
       await api.updateAvailability(value ? 'online' : 'offline');
       setIsOnline(value);
-      if (value) {
-        startListeningForOffers();
+      if (value && rider) {
+        startListeningForOffers(rider.id);
       } else {
         stopListeningForOffers();
       }
@@ -86,25 +113,35 @@ export default function HomeScreen({ navigation }: Props) {
     }
   };
 
-  const handleAcceptOffer = () => {
-    const job = storeRespondToOffer('accept');
-    setCurrentOffer(null);
-    if (job) {
-      setActiveJob(job);
-      navigation.navigate('ActiveJob', { jobId: job.id });
+  const handleAcceptOffer = async () => {
+    if (!currentOffer) return;
+    try {
+      const result = await api.respondToOffer(currentOffer.id, 'accept');
+      setCurrentOffer(null);
+      if (result.job) {
+        storeSetActiveJob(result.job);
+        navigation.navigate('ActiveJob', { jobId: result.job.id });
+      }
+    } catch {
+      // Handle error
     }
   };
 
-  const handleRejectOffer = () => {
-    storeRespondToOffer('reject');
-    setCurrentOffer(null);
+  const handleRejectOffer = async () => {
+    if (!currentOffer) return;
+    try {
+      await api.respondToOffer(currentOffer.id, 'reject');
+      setCurrentOffer(null);
+    } catch {
+      // Handle error
+    }
   };
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    setActiveJob(getActiveJob());
-    setTimeout(() => setRefreshing(false), 500);
-  }, []);
+    await Promise.all([loadActiveJob(), loadEarnings()]);
+    setRefreshing(false);
+  }, [loadActiveJob, loadEarnings]);
 
   const statusColor = isOnline ? Colors.primary : Colors.statusOffline;
   const statusText = activeJob ? 'On Job' : isOnline ? 'Online' : 'Offline';
@@ -146,7 +183,7 @@ export default function HomeScreen({ navigation }: Props) {
         {/* Quick Stats */}
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>₱{MOCK_EARNINGS.today.toFixed(2)}</Text>
+            <Text style={styles.statValue}>₱{(earnings?.today ?? 0).toFixed(2)}</Text>
             <Text style={styles.statLabel}>Today's Earnings</Text>
           </View>
           <View style={styles.statCard}>
