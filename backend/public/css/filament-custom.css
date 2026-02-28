@@ -1,0 +1,200 @@
+/*
+ * ALiN Direct - Custom Filament Panel Styles
+ * Theme: Black sidebar, white text, yellow highlights, white main area
+ */
+
+/* ── Force Light Mode ─────────────────────────────────────── */
+:root {
+    color-scheme: light !important;
+}
+
+/* ── Main Content Area: White Background with Black Text ──── */
+.fi-body,
+.fi-main,
+.fi-main-ctn,
+.fi-page {
+    background-color: #ffffff !important;
+    color: #111827 !important;
+}
+
+/* Table text */
+.fi-ta-text,
+.fi-ta-cell,
+.fi-ta-row td,
+table th,
+table td {
+    color: #111827 !important;
+}
+
+/* ── Sidebar: Pure Black ──────────────────────────────────── */
+.fi-sidebar {
+    background-color: #000000 !important;
+    border-right: 1px solid #1a1a1a !important;
+}
+
+.fi-sidebar-header {
+    background-color: #ffffff !important;
+    border-bottom: 1px solid rgba(245, 165, 36, 0.25) !important;
+}
+
+.fi-sidebar-footer {
+    background-color: #000000 !important;
+    border-top: 1px solid #1a1a1a !important;
+}
+
+/* Brand name */
+.fi-sidebar-header a,
+.fi-sidebar-header a span,
+.fi-sidebar-header .fi-brand,
+.fi-sidebar-header .fi-brand span {
+    color: #ffffff !important;
+}
+
+/* Sidebar nav items - default: white text */
+.fi-sidebar-item a,
+.fi-sidebar-item button,
+.fi-sidebar-nav .fi-sidebar-item-button {
+    color: #ffffff !important;
+    border-radius: 0.5rem !important;
+    margin: 2px 0.5rem !important;
+    transition: all 0.15s ease !important;
+}
+
+/* Override Tailwind .text-gray-700 inside sidebar */
+.fi-sidebar .text-gray-700,
+.fi-sidebar-item .text-gray-700,
+.fi-sidebar-item a .text-gray-700,
+.fi-sidebar-item button .text-gray-700,
+.fi-sidebar-item span {
+    color: #ffffff !important;
+}
+
+/* Sidebar nav icons - white */
+.fi-sidebar-item-icon,
+.fi-sidebar-item svg {
+    color: #ffffff !important;
+}
+
+/* Sidebar nav items - hover */
+.fi-sidebar-item a:hover,
+.fi-sidebar-item button:hover,
+.fi-sidebar-nav .fi-sidebar-item-button:hover {
+    background-color: rgba(245, 165, 36, 0.15) !important;
+    color: #fbbf24 !important;
+}
+
+.fi-sidebar-item a:hover .fi-sidebar-item-icon,
+.fi-sidebar-item a:hover svg {
+    color: #fbbf24 !important;
+}
+
+/* Sidebar nav items - active: yellow highlight bg */
+.fi-sidebar-item.fi-active a,
+.fi-sidebar-item.fi-active button,
+.fi-sidebar-item.fi-active .fi-sidebar-item-button,
+.fi-sidebar-item a.fi-active,
+.fi-sidebar-nav .fi-sidebar-item-button.fi-active {
+    background-color: #f5a524 !important;
+    color: #000000 !important;
+    font-weight: 600 !important;
+}
+
+.fi-sidebar-item.fi-active .fi-sidebar-item-icon,
+.fi-sidebar-item.fi-active svg {
+    color: #000000 !important;
+}
+
+/* Active sidebar item text override - black on amber */
+.fi-sidebar-item.fi-active .text-gray-700,
+.fi-sidebar-item.fi-active span {
+    color: #000000 !important;
+}
+
+/* Sidebar group labels - yellow uppercase */
+.fi-sidebar-group-label,
+.fi-sidebar-group .fi-sidebar-group-button span {
+    color: #f5a524 !important;
+    font-size: 0.7rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+}
+
+/* Sidebar group collapse chevrons */
+.fi-sidebar-group-button,
+.fi-sidebar-group-button svg {
+    color: #f5a524 !important;
+}
+
+/* Sidebar collapse toggle button */
+.fi-sidebar-close-btn,
+.fi-sidebar-close-btn svg,
+button[x-on\\:click="$store.sidebar.isOpen = false"] {
+    color: #ffffff !important;
+}
+
+/* ── Top Bar: White with border ───────────────────────────── */
+.fi-topbar {
+    background-color: #ffffff !important;
+    border-bottom: 1px solid #e5e7eb !important;
+}
+
+.fi-topbar nav {
+    background-color: #ffffff !important;
+}
+
+/* Top bar text & icons - dark on white */
+.fi-topbar nav *,
+.fi-topbar .fi-icon-btn,
+.fi-topbar .fi-icon-btn svg {
+    color: #111827 !important;
+}
+
+/* ── Breadcrumbs ──────────────────────────────────────────── */
+.fi-breadcrumbs li,
+.fi-breadcrumbs a {
+    color: #6b7280 !important;
+}
+
+/* ── Tables: White bg, black text ─────────────────────────── */
+.fi-ta-ctn,
+.fi-ta-header-cell,
+.fi-ta-row {
+    background-color: #ffffff !important;
+    color: #111827 !important;
+}
+
+.fi-ta-row:hover td {
+    background-color: #f9fafb !important;
+}
+
+/* ── Cards / Sections ─────────────────────────────────────── */
+.fi-section,
+.fi-section-content-ctn {
+    background-color: #ffffff !important;
+    color: #111827 !important;
+}
+
+/* Widgets */
+.fi-wi {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+    border-radius: 0.75rem !important;
+}
+
+/* ── Scrollbar for sidebar ────────────────────────────────── */
+.fi-sidebar-nav::-webkit-scrollbar {
+    width: 4px;
+}
+.fi-sidebar-nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+.fi-sidebar-nav::-webkit-scrollbar-thumb {
+    background: rgba(245, 165, 36, 0.4);
+    border-radius: 4px;
+}
+
+/* ── Login Page ───────────────────────────────────────────── */
+.fi-simple-layout {
+    background-color: #f9fafb !important;
+}
+
