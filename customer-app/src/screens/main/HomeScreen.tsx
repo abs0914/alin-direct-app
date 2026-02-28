@@ -2,8 +2,8 @@
 // ALiN Direct Customer App - Home Screen
 // ============================================================
 // Choose Delivery Service screen per PDF spec.
-// MOCK: Uses jobStore for active job tracking.
-// PRODUCTION: Replace jobStore calls with Supabase queries.
+// Fetches active booking from the API and listens for real-time
+// status updates via Supabase Realtime.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -17,7 +17,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { HomeStackParamList } from '../../navigation/MainNavigator';
-import { getActiveJob, addJobListener, removeJobListener } from '../../store/jobStore';
+import api from '../../services/api';
+import { addJobListener, removeJobListener, setActiveJob } from '../../store/jobStore';
 import Colors from '../../theme/colors';
 import { DeliveryJob } from '../../types';
 
@@ -83,17 +84,27 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function HomeScreen({ navigation }: Props) {
   const [selectedService, setSelectedService] = useState<string>('pickup_to_branch');
-  const [activeJob, setActiveJob] = useState<DeliveryJob | null>(getActiveJob());
+  const [activeJob, setActiveJobLocal] = useState<DeliveryJob | null>(null);
 
+  // Fetch active booking from API on focus
   useFocusEffect(
     useCallback(() => {
-      setActiveJob(getActiveJob());
+      (async () => {
+        try {
+          const job = await api.getActiveBooking();
+          setActiveJobLocal(job);
+          setActiveJob(job);
+        } catch {
+          // Silently fail
+        }
+      })();
     }, [])
   );
 
+  // Listen for real-time status updates from jobStore
   useEffect(() => {
     const listener = (updatedJob: DeliveryJob) => {
-      setActiveJob(updatedJob.status === 'delivered' ? null : updatedJob);
+      setActiveJobLocal(updatedJob.status === 'delivered' ? null : updatedJob);
     };
     addJobListener(listener);
     return () => removeJobListener(listener);

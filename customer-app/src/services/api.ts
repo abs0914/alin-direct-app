@@ -1,69 +1,107 @@
 // ============================================================
-// ALiN Direct Customer App - API Service (Mock Mode - Sprint 2)
+// ALiN Direct Customer App - API Service
 // ============================================================
-// MOCK: All methods return local mock data with simulated delays.
-// PRODUCTION: Restore Axios HTTP calls to Laravel API (see git history).
+// Production: Axios HTTP calls to Laravel API with Supabase JWT.
+// The Supabase access_token is sent as Bearer token; the Laravel
+// SupabaseAuth middleware validates it and resolves the user.
 
-import { MOCK_USER, MOCK_CUSTOMER, calculatePriceEstimate } from '../data/mockData';
-import { createJob, getJobById, getJobHistory as getStoreHistory } from '../store/jobStore';
-
-const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+import axios, { AxiosInstance } from 'axios';
+import { supabase } from '../lib/supabase';
+import Config from '../config';
+import { User, Customer, DeliveryJob, PriceEstimate } from '../types';
 
 class ApiService {
-  // ---- Profile ---- (MOCK)
-  async getProfile() {
-    await delay(300);
-    return { user: MOCK_USER, customer: MOCK_CUSTOMER };
+  private client: AxiosInstance;
+
+  constructor() {
+    this.client = axios.create({
+      baseURL: Config.API_BASE_URL,
+      timeout: 15000,
+      headers: { 'Accept': 'application/json' },
+    });
+
+    // Attach Supabase JWT to every request
+    this.client.interceptors.request.use(async (config) => {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    });
   }
 
-  async updateProfile(data: { name: string }) {
-    await delay(300);
-    return { ...MOCK_USER, ...data };
+  // ── Registration ──────────────────────────────────
+
+  async registerCustomer(data: {
+    name: string;
+    email?: string;
+    default_address?: string;
+    default_lat?: number;
+    default_lng?: number;
+  }): Promise<{ user: User; customer: Customer }> {
+    const res = await this.client.post('/customer/register', data);
+    return res.data;
   }
 
-  // ---- Booking ---- (MOCK)
+  // ── Profile ───────────────────────────────────────
+
+  async getProfile(): Promise<{ user: User; customer: Customer }> {
+    const res = await this.client.get('/customer/profile');
+    return res.data;
+  }
+
+  async updateProfile(data: Record<string, unknown>): Promise<{ user: User; customer: Customer }> {
+    const res = await this.client.put('/customer/profile', data);
+    return res.data;
+  }
+
+  // ── Price Estimation ──────────────────────────────
+
   async estimatePrice(data: {
-    pickup_lat: number; pickup_lng: number;
-    dropoff_lat: number; dropoff_lng: number;
+    pickup_lat: number;
+    pickup_lng: number;
+    dropoff_lat: number;
+    dropoff_lng: number;
     vehicle_type: string;
-  }) {
-    await delay(500);
-    return calculatePriceEstimate(
-      data.vehicle_type,
-      data.pickup_lat, data.pickup_lng,
-      data.dropoff_lat, data.dropoff_lng,
-    );
+    package_size?: string;
+  }): Promise<PriceEstimate> {
+    const res = await this.client.post('/customer/estimate', data);
+    return res.data;
   }
 
-  async createBooking(data: Record<string, unknown>) {
-    await delay(800);
-    const job = createJob(data as Parameters<typeof createJob>[0]);
-    return job;
+  // ── Bookings ──────────────────────────────────────
+
+  async createBooking(data: Record<string, unknown>): Promise<DeliveryJob> {
+    const res = await this.client.post('/customer/bookings', data);
+    return res.data;
   }
 
-  async getBookingHistory(_page: number = 1) {
-    await delay(400);
-    const allJobs = getStoreHistory();
-    const pageSize = 15;
-    const start = (_page - 1) * pageSize;
-    return { data: allJobs.slice(start, start + pageSize) };
+  async getBookingHistory(page: number = 1): Promise<{ data: DeliveryJob[] }> {
+    const res = await this.client.get('/customer/bookings', { params: { page } });
+    return res.data;
   }
 
-  async getBookingDetail(id: number) {
-    await delay(300);
-    const job = getJobById(id);
-    if (!job) throw new Error('Job not found');
-    return job;
+  async getBookingDetail(id: number): Promise<DeliveryJob> {
+    const res = await this.client.get(`/customer/bookings/${id}`);
+    return res.data;
   }
 
-  async cancelBooking(id: number) {
-    await delay(400);
-    const job = getJobById(id);
-    if (job) {
-      job.status = 'cancelled';
-      job.payment_status = 'refunded';
-    }
-    return { success: true };
+  async getActiveBooking(): Promise<DeliveryJob | null> {
+    const res = await this.client.get('/customer/bookings/active');
+    return res.data.job ?? null;
+  }
+
+  async cancelBooking(id: number): Promise<{ success: boolean; job: DeliveryJob }> {
+    const res = await this.client.post(`/customer/bookings/${id}/cancel`);
+    return res.data;
+  }
+
+  // ── Driver Location (for tracking) ────────────────
+
+  async getDriverLocation(jobId: number): Promise<{ lat: number | null; lng: number | null; last_seen_at: string | null }> {
+    const res = await this.client.get(`/customer/bookings/${jobId}/driver-location`);
+    return res.data;
   }
 }
 

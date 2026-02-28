@@ -2,8 +2,7 @@
 // ALiN Direct Customer App - New Delivery Booking Screen
 // ============================================================
 // Two-step booking: Step 1 = addresses + package, Step 2 = price + payment.
-// MOCK: Uses mock addresses & flat-fee pricing.
-// PRODUCTION: Replace with real geocoding & server-side pricing.
+// Uses real API pricing from the Laravel backend.
 
 import React, { useState, useMemo } from 'react';
 import {
@@ -31,8 +30,9 @@ if (Platform.OS !== 'web') {
 }
 import { HomeStackParamList } from '../../navigation/MainNavigator';
 import api from '../../services/api';
-import { MOCK_CUSTOMER, SAMPLE_ADDRESSES } from '../../data/mockData';
+import { useAuth } from '../../contexts/AuthContext';
 import Colors from '../../theme/colors';
+import { PriceEstimate } from '../../types';
 
 type Props = {
   navigation: NativeStackNavigationProp<HomeStackParamList, 'NewDelivery'>;
@@ -90,23 +90,30 @@ function PaymentIcon({ method, color }: { method: typeof PAYMENT_METHODS[number]
 export default function NewDeliveryScreen({ navigation }: Props) {
   const route = useRoute<RouteProp<HomeStackParamList, 'NewDelivery'>>();
   const _deliveryType = route.params?.deliveryType ?? 'door_to_door';
+  const { user, customer } = useAuth();
 
   // Step 1 state
-  const [pickupAddress, setPickupAddress] = useState(MOCK_CUSTOMER.default_address ?? '');
-  const [dropoffAddress, setDropoffAddress] = useState(SAMPLE_ADDRESSES[1].address);
+  const [pickupAddress, setPickupAddress] = useState(customer?.default_address ?? '');
+  const [pickupLat, setPickupLat] = useState(customer?.default_lat ?? 14.5995);
+  const [pickupLng, setPickupLng] = useState(customer?.default_lng ?? 120.9842);
+  const [dropoffAddress, setDropoffAddress] = useState('');
+  const [dropoffLat, setDropoffLat] = useState(14.5547);
+  const [dropoffLng, setDropoffLng] = useState(121.0244);
   const [packageCategory, setPackageCategory] = useState<PackageCategory>('pouch');
   const [sizePreset, setSizePreset] = useState('pouch_small');
 
   // Step 2 state
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('alin_pay');
   const [isLoading, setIsLoading] = useState(false);
+  const [isPriceLoading, setIsPriceLoading] = useState(false);
   const [showBreakdown, setShowBreakdown] = useState(true);
+  const [priceEstimate, setPriceEstimate] = useState<PriceEstimate | null>(null);
 
   // Multi-step: 1 = address+package, 2 = price+payment
   const [step, setStep] = useState(1);
 
-  // Derived pricing
-  const totalPrice = PACKAGE_PRICES[sizePreset] ?? 0;
+  // Derived pricing from API estimate
+  const totalPrice = priceEstimate?.total_price ?? PACKAGE_PRICES[sizePreset] ?? 0;
   // Extract display label for breakdown
   const sizeLabel = [...POUCH_PRESETS, ...BOX_PRESETS].find(p => p.key === sizePreset)?.label ?? '';
   const categoryLabel = packageCategory === 'pouch' ? 'Pouch' : 'Box';
@@ -120,49 +127,56 @@ export default function NewDeliveryScreen({ navigation }: Props) {
 
   const presets = packageCategory === 'pouch' ? POUCH_PRESETS : BOX_PRESETS;
 
-  // Look up coords for an address from our sample list (demo geocoding)
-  const findCoords = (addr: string) => {
-    const match = SAMPLE_ADDRESSES.find(a => a.address === addr);
-    return match ?? SAMPLE_ADDRESSES[0];
-  };
-
   // Map region based on pickup/dropoff
-  const pickupCoords = useMemo(() => findCoords(pickupAddress), [pickupAddress]);
-  const dropoffCoords = useMemo(() => findCoords(dropoffAddress), [dropoffAddress]);
   const mapRegion = useMemo(() => {
-    const midLat = (pickupCoords.lat + dropoffCoords.lat) / 2;
-    const midLng = (pickupCoords.lng + dropoffCoords.lng) / 2;
-    const latDelta = Math.abs(pickupCoords.lat - dropoffCoords.lat) * 1.6 || 0.05;
-    const lngDelta = Math.abs(pickupCoords.lng - dropoffCoords.lng) * 1.6 || 0.05;
+    const midLat = (pickupLat + dropoffLat) / 2;
+    const midLng = (pickupLng + dropoffLng) / 2;
+    const latDelta = Math.abs(pickupLat - dropoffLat) * 1.6 || 0.05;
+    const lngDelta = Math.abs(pickupLng - dropoffLng) * 1.6 || 0.05;
     return { latitude: midLat, longitude: midLng, latitudeDelta: latDelta, longitudeDelta: lngDelta };
-  }, [pickupCoords, dropoffCoords]);
+  }, [pickupLat, pickupLng, dropoffLat, dropoffLng]);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!pickupAddress.trim() || !dropoffAddress.trim()) {
       Alert.alert('Missing Address', 'Please enter both pickup and dropoff addresses.');
       return;
     }
-    setStep(2);
+
+    // Fetch price estimate from API
+    setIsPriceLoading(true);
+    try {
+      const estimate = await api.estimatePrice({
+        pickup_lat: pickupLat,
+        pickup_lng: pickupLng,
+        dropoff_lat: dropoffLat,
+        dropoff_lng: dropoffLng,
+        vehicle_type: 'motorcycle',
+        package_size: sizePreset,
+      });
+      setPriceEstimate(estimate);
+      setStep(2);
+    } catch {
+      Alert.alert('Error', 'Failed to get price estimate. Please try again.');
+    } finally {
+      setIsPriceLoading(false);
+    }
   };
 
   const handleBook = async () => {
     setIsLoading(true);
     try {
-      const pickup = findCoords(pickupAddress);
-      const dropoff = findCoords(dropoffAddress);
-
       const job = await api.createBooking({
-        vehicle_type: 'motorcycle', // default for flat-fee model
-        pickup_contact_name: 'Customer',
-        pickup_contact_phone: '+639170000000',
+        vehicle_type: 'motorcycle',
+        pickup_contact_name: user?.name ?? 'Customer',
+        pickup_contact_phone: user?.phone ?? '',
         pickup_address: pickupAddress,
-        pickup_lat: pickup.lat,
-        pickup_lng: pickup.lng,
+        pickup_lat: pickupLat,
+        pickup_lng: pickupLng,
         dropoff_contact_name: 'Recipient',
-        dropoff_contact_phone: '+639170000001',
+        dropoff_contact_phone: '',
         dropoff_address: dropoffAddress,
-        dropoff_lat: dropoff.lat,
-        dropoff_lng: dropoff.lng,
+        dropoff_lat: dropoffLat,
+        dropoff_lng: dropoffLng,
         package_description: `${categoryLabel} - ${sizeLabel}`,
         package_size: sizePreset,
         total_price: totalPrice,
@@ -194,12 +208,12 @@ export default function NewDeliveryScreen({ navigation }: Props) {
                 rotateEnabled={false}
               >
                 <Marker
-                  coordinate={{ latitude: pickupCoords.lat, longitude: pickupCoords.lng }}
+                  coordinate={{ latitude: pickupLat, longitude: pickupLng }}
                   title="Pickup"
                   pinColor="#3B82F6"
                 />
                 <Marker
-                  coordinate={{ latitude: dropoffCoords.lat, longitude: dropoffCoords.lng }}
+                  coordinate={{ latitude: dropoffLat, longitude: dropoffLng }}
                   title="Dropoff"
                   pinColor={Colors.danger}
                 />
@@ -285,8 +299,17 @@ export default function NewDeliveryScreen({ navigation }: Props) {
 
         {/* Next button pinned to bottom */}
         <View style={styles.bottomBar}>
-          <TouchableOpacity style={styles.nextBtn} onPress={handleNext} activeOpacity={0.8}>
-            <Text style={styles.nextBtnText}>Next</Text>
+          <TouchableOpacity
+            style={[styles.nextBtn, isPriceLoading && styles.btnDisabled]}
+            onPress={handleNext}
+            disabled={isPriceLoading}
+            activeOpacity={0.8}
+          >
+            {isPriceLoading ? (
+              <ActivityIndicator color={Colors.textOnPrimary} />
+            ) : (
+              <Text style={styles.nextBtnText}>Next</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -317,22 +340,31 @@ export default function NewDeliveryScreen({ navigation }: Props) {
             />
           </TouchableOpacity>
 
-          {showBreakdown && (
+          {showBreakdown && priceEstimate && (
             <View style={styles.breakdownBody}>
               <View style={styles.breakdownRow}>
                 <View style={styles.breakdownLeft}>
                   <MaterialCommunityIcons name="package-variant" size={16} color={Colors.textSecondary} />
-                  <Text style={styles.breakdownLabel}>Size ({sizeLabel})</Text>
+                  <Text style={styles.breakdownLabel}>Base Fare</Text>
                 </View>
-                <Text style={styles.breakdownValue}>₱{Math.round(totalPrice / 2)}</Text>
+                <Text style={styles.breakdownValue}>₱{priceEstimate.base_fare}</Text>
               </View>
               <View style={styles.breakdownRow}>
                 <View style={styles.breakdownLeft}>
-                  <MaterialCommunityIcons name="cube-outline" size={16} color={Colors.textSecondary} />
-                  <Text style={styles.breakdownLabel}>Type ({categoryLabel})</Text>
+                  <MaterialCommunityIcons name="map-marker-distance" size={16} color={Colors.textSecondary} />
+                  <Text style={styles.breakdownLabel}>Distance ({priceEstimate.estimated_distance_km} km)</Text>
                 </View>
-                <Text style={styles.breakdownValue}>₱{totalPrice - Math.round(totalPrice / 2)}</Text>
+                <Text style={styles.breakdownValue}>₱{priceEstimate.distance_fare}</Text>
               </View>
+              {priceEstimate.surge_multiplier > 1 && (
+                <View style={styles.breakdownRow}>
+                  <View style={styles.breakdownLeft}>
+                    <Ionicons name="trending-up" size={16} color={Colors.textSecondary} />
+                    <Text style={styles.breakdownLabel}>Surge (×{priceEstimate.surge_multiplier})</Text>
+                  </View>
+                  <Text style={styles.breakdownValue}>Applied</Text>
+                </View>
+              )}
             </View>
           )}
         </View>

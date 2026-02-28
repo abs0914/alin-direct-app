@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\CustomerApiController;
 use App\Http\Controllers\Api\RiderApiController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -54,6 +55,26 @@ Route::middleware('supabase.auth')->group(function () {
 
         // Documents (KYC)
         Route::post('/documents', [RiderApiController::class, 'uploadDocument']);
+    });
+
+    // ── Customer / Customer App API ──────────────────
+    Route::prefix('customer')->group(function () {
+        Route::post('/register', [CustomerApiController::class, 'register']);
+        Route::get('/profile', [CustomerApiController::class, 'profile']);
+        Route::put('/profile', [CustomerApiController::class, 'updateProfile']);
+
+        // Price estimation
+        Route::post('/estimate', [CustomerApiController::class, 'estimatePrice']);
+
+        // Bookings
+        Route::get('/bookings/active', [CustomerApiController::class, 'activeBooking']);
+        Route::get('/bookings', [CustomerApiController::class, 'bookingHistory']);
+        Route::post('/bookings', [CustomerApiController::class, 'createBooking']);
+        Route::get('/bookings/{job}', [CustomerApiController::class, 'bookingDetail']);
+        Route::post('/bookings/{job}/cancel', [CustomerApiController::class, 'cancelBooking']);
+
+        // Driver location (for live tracking)
+        Route::get('/bookings/{job}/driver-location', [CustomerApiController::class, 'driverLocation']);
     });
 });
 

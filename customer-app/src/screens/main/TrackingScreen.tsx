@@ -1,8 +1,7 @@
 // ============================================================
 // ALiN Direct Customer App - Live Tracking Screen
 // ============================================================
-// MOCK: Subscribes to in-memory jobStore for status & GPS updates.
-// PRODUCTION: Replace jobStore listeners with Supabase Realtime.
+// Subscribes to Supabase Realtime for live status & GPS updates.
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -20,7 +19,12 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { HomeStackParamList } from '../../navigation/MainNavigator';
 import api from '../../services/api';
-import { addJobListener, removeJobListener, addGPSListener, removeGPSListener } from '../../store/jobStore';
+import {
+  addJobListener, removeJobListener,
+  addGPSListener, removeGPSListener,
+  startTrackingJob, stopTrackingJob,
+  setActiveJob,
+} from '../../store/jobStore';
 import Colors from '../../theme/colors';
 import { DeliveryJob } from '../../types';
 
@@ -49,12 +53,15 @@ export default function TrackingScreen({ navigation, route }: Props) {
   const [lastGPSUpdate, setLastGPSUpdate] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load initial job details
+  // Load initial job details and start Supabase Realtime tracking
   useEffect(() => {
     (async () => {
       try {
         const response = await api.getBookingDetail(jobId);
         setJob(response);
+        setActiveJob(response);
+        // Start Supabase Realtime channel for this job
+        startTrackingJob(jobId);
       } catch {
         Alert.alert('Error', 'Failed to load delivery details.');
         navigation.goBack();
@@ -62,9 +69,11 @@ export default function TrackingScreen({ navigation, route }: Props) {
         setIsLoading(false);
       }
     })();
+
+    return () => stopTrackingJob();
   }, [jobId]);
 
-  // Subscribe to job status changes from mock store
+  // Listen for real-time job status changes via jobStore
   useEffect(() => {
     const listener = (updatedJob: DeliveryJob) => {
       if (updatedJob.id === jobId) setJob({ ...updatedJob });
@@ -73,7 +82,7 @@ export default function TrackingScreen({ navigation, route }: Props) {
     return () => removeJobListener(listener);
   }, [jobId]);
 
-  // Subscribe to GPS simulation
+  // Listen for real-time GPS updates via jobStore
   useEffect(() => {
     const gpsListener = (lat: number, lng: number) => {
       setDriverLat(lat);

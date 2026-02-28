@@ -1,22 +1,20 @@
 // ============================================================
 // ALiN Direct Customer App - Authentication Context
 // ============================================================
-// MOCK: Demo mode auto-authenticates with hardcoded customer.
-// PRODUCTION: Set DEMO_MODE = false to use Supabase auth flow.
+// Uses Supabase Phone OTP auth. On successful verification,
+// fetches customer profile from Laravel backend (auto-provisioned
+// by SupabaseAuth middleware).
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { supabase } from '../lib/supabase';
 import api from '../services/api';
 import { User, Customer } from '../types';
-import { MOCK_USER, MOCK_CUSTOMER } from '../data/mockData';
-
-// ---- DEMO FLAG ----
-// MOCK: Set to true for offline demo. PRODUCTION: Set to false.
-const DEMO_MODE = true;
+import { Session } from '@supabase/supabase-js';
 
 interface AuthState {
   user: User | null;
   customer: Customer | null;
-  session: unknown;
+  session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
 }
@@ -24,7 +22,7 @@ interface AuthState {
 interface AuthContextType extends AuthState {
   requestOtp: (phone: string) => Promise<void>;
   verifyOtp: (phone: string, otp: string) => Promise<void>;
-  register: (data: { name: string; phone: string }) => Promise<void>;
+  register: (data: { name: string; email?: string }) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -40,49 +38,82 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: false,
   });
 
-  useEffect(() => {
-    if (DEMO_MODE) {
-      // Auto-login with mock data after a brief splash
-      const timer = setTimeout(() => {
-        setState({
-          user: MOCK_USER,
-          customer: MOCK_CUSTOMER,
-          session: { demo: true },
-          isLoading: false,
-          isAuthenticated: true,
-        });
-      }, 800);
-      return () => clearTimeout(timer);
-    }
-
-    // PRODUCTION: Supabase auth flow (preserved for Sprint 3+)
-    // Uncomment and import supabase when ready:
-    // supabase.auth.getSession().then(({ data: { session } }) => { ... });
-    setState((prev) => ({ ...prev, isLoading: false }));
-  }, []);
-
-  const requestOtp = useCallback(async (_phone: string) => {
-    if (DEMO_MODE) return; // No-op in demo
-  }, []);
-
-  const verifyOtp = useCallback(async (_phone: string, _otp: string) => {
-    if (DEMO_MODE) {
+  // Fetch customer profile from backend once we have a session
+  const loadProfile = useCallback(async (session: Session) => {
+    try {
+      const { user, customer } = await api.getProfile();
       setState({
-        user: MOCK_USER,
-        customer: MOCK_CUSTOMER,
-        session: { demo: true },
+        user,
+        customer,
+        session,
         isLoading: false,
         isAuthenticated: true,
       });
-      return;
+    } catch {
+      // Session exists but no customer profile yet (new user)
+      setState({
+        user: null,
+        customer: null,
+        session,
+        isLoading: false,
+        isAuthenticated: true,
+      });
     }
   }, []);
 
-  const register = useCallback(async (_regData: { name: string; phone: string }) => {
-    if (DEMO_MODE) return;
+  // Bootstrap: check existing session on mount
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        loadProfile(session);
+      } else {
+        setState(prev => ({ ...prev, isLoading: false }));
+      }
+    });
+
+    // Listen for auth state changes (login, logout, token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        loadProfile(session);
+      } else {
+        setState({
+          user: null,
+          customer: null,
+          session: null,
+          isLoading: false,
+          isAuthenticated: false,
+        });
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [loadProfile]);
+
+  const requestOtp = useCallback(async (phone: string) => {
+    const { error } = await supabase.auth.signInWithOtp({ phone });
+    if (error) throw error;
   }, []);
 
+  const verifyOtp = useCallback(async (phone: string, otp: string) => {
+    const { error } = await supabase.auth.verifyOtp({
+      phone,
+      token: otp,
+      type: 'sms',
+    });
+    if (error) throw error;
+    // onAuthStateChange will handle the rest
+  }, []);
+
+  const register = useCallback(
+    async (regData: { name: string; email?: string }) => {
+      const { user, customer } = await api.registerCustomer(regData);
+      setState(prev => ({ ...prev, user, customer }));
+    },
+    []
+  );
+
   const logout = useCallback(async () => {
+    await supabase.auth.signOut();
     setState({
       user: null,
       customer: null,
@@ -95,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshProfile = useCallback(async () => {
     try {
       const profileData = await api.getProfile();
-      setState((prev) => ({ ...prev, user: profileData.user, customer: profileData.customer }));
+      setState(prev => ({ ...prev, user: profileData.user, customer: profileData.customer }));
     } catch {
       // Silently fail
     }
@@ -103,7 +134,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ ...state, requestOtp, verifyOtp, register, logout, refreshProfile }}
+      value={{
+        ...state,
+        requestOtp,
+        verifyOtp,
+        register,
+        logout,
+        refreshProfile,
+      }}
     >
       {children}
     </AuthContext.Provider>
