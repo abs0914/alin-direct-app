@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Driver App - Core Type Definitions
+// ALiN Move Driver App - Core Type Definitions
 // ============================================================
 
 export interface User {

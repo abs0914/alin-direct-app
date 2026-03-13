@@ -28,6 +28,16 @@ class BroadcastDispatch extends Page
 
     protected static string $view = 'filament.branch.pages.broadcast-dispatch';
 
+    public static function canAccess(): bool
+    {
+        return Auth::user()?->canHandleBranchOperations() ?? false;
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::canAccess();
+    }
+
     // ── Form state ─────────────────────────────────────────────
     public ?int $selectedJobId = null;
     public string $vehicleTypeFilter = '';

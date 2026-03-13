@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Driver App - Entry Point
+// ALiN Move Driver App - Entry Point
 // ============================================================
 
 import React from 'react';

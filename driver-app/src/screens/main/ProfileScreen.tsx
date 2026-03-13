@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Driver App - Profile Screen
+// ALiN Move Driver App - Profile Screen
 // ============================================================
 
 import React from 'react';
@@ -119,7 +119,7 @@ export default function ProfileScreen() {
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
 
-      <Text style={styles.version}>ALiN Direct Driver v1.0.0</Text>
+      <Text style={styles.version}>ALiN Move Driver v1.0.0</Text>
     </ScrollView>
   );
 }

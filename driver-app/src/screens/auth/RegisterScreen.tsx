@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Driver App - Registration Screen
+// ALiN Move Driver App - Registration Screen
 // ============================================================
 
 import React, { useState } from 'react';
@@ -67,7 +67,7 @@ export default function RegisterScreen({ navigation }: Props) {
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>Become a Driver</Text>
-        <Text style={styles.subtitle}>Join ALiN Direct and start earning today</Text>
+        <Text style={styles.subtitle}>Join ALiN Move and start earning today</Text>
 
         <View style={styles.field}>
           <Text style={styles.label}>Full Name</Text>

@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Customer App - Main Tab Navigator
+// ALiN Move Customer App - Main Tab Navigator
 // ============================================================
 
 import React from 'react';
@@ -60,7 +60,7 @@ function HomeStackNavigator() {
         component={HomeScreen}
         options={{
           headerLeft: () => (
-            <Text style={{ fontSize: 18, fontWeight: '700', color: Colors.text, marginLeft: 16 }}>ALiN Direct</Text>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: Colors.text, marginLeft: 16 }}>ALiN Move</Text>
           ),
           headerTitle: () => null,
           headerRight: () => (

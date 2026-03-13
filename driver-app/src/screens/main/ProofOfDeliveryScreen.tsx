@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Driver App - Proof of Delivery (POD) Screen
+// ALiN Move Driver App - Proof of Delivery (POD) Screen
 // ============================================================
 // MOCK: Simulates photo capture and e-signature.
 // PRODUCTION: Use expo-camera and react-native-signature-canvas.

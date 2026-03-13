@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Customer App - OTP Verification Screen
+// ALiN Move Customer App - OTP Verification Screen
 // ============================================================
 
 import React, { useState, useEffect, useRef } from 'react';

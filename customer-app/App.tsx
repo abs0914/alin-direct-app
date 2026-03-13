@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Customer App - Entry Point
+// ALiN Move Customer App - Entry Point
 // ============================================================
 
 import React from 'react';

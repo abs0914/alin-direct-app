@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Customer App - Live Tracking Screen
+// ALiN Move Customer App - Live Tracking Screen
 // ============================================================
 // Subscribes to Supabase Realtime for live status & GPS updates.
 

@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Driver App - Home Screen (Dashboard)
+// ALiN Move Driver App - Home Screen (Dashboard)
 // ============================================================
 // MOCK: Subscribes to in-memory jobStore for offers & active job.
 // PRODUCTION: Replace with Supabase Realtime for job broadcasts.

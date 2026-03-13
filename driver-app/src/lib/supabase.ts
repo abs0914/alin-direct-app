@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Driver App - Supabase Client
+// ALiN Move Driver App - Supabase Client
 // ============================================================
 
 import 'react-native-url-polyfill/auto';

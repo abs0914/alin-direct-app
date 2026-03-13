@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Driver App - Job Offer Modal
+// ALiN Move Driver App - Job Offer Modal
 // ============================================================
 // MOCK: Displays offer from in-memory jobStore.
 // PRODUCTION: Replace with Supabase Realtime offer notifications.

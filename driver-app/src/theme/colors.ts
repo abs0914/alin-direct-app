@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Driver App - Color Theme
+// ALiN Move Driver App - Color Theme
 // ============================================================
 
 const Colors = {

@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Customer App - Auth Stack Navigator
+// ALiN Move Customer App - Auth Stack Navigator
 // ============================================================
 
 import React from 'react';

@@ -22,6 +22,16 @@ class RiderPerformance extends Page
 
     protected static string $view = 'filament.branch.pages.rider-performance';
 
+    public static function canAccess(): bool
+    {
+        return Auth::user()?->canManageBranchReports() ?? false;
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::canAccess();
+    }
+
     private function branchRiderQuery()
     {
         $branchId = Auth::user()?->branch_id;

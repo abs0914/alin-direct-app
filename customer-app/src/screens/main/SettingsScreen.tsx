@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Customer App - Settings Screen
+// ALiN Move Customer App - Settings Screen
 // ============================================================
 
 import React, { useState } from 'react';
@@ -61,15 +61,15 @@ export default function SettingsScreen() {
   };
 
   const handleSupport = () => {
-    Linking.openURL('mailto:support@alindirect.com');
+    Linking.openURL('mailto:support@alinmove.com');
   };
 
   const handleTerms = () => {
-    Alert.alert('Terms & Conditions', 'Terms and conditions will be available at alindirect.com/terms');
+    Alert.alert('Terms & Conditions', 'Terms and conditions will be available at alinmove.com/terms');
   };
 
   const handlePrivacy = () => {
-    Alert.alert('Privacy Policy', 'Privacy policy will be available at alindirect.com/privacy');
+    Alert.alert('Privacy Policy', 'Privacy policy will be available at alinmove.com/privacy');
   };
 
   return (
@@ -102,7 +102,7 @@ export default function SettingsScreen() {
         <SettingRow icon="❓" label="Help & Support" onPress={handleSupport} />
         <SettingRow icon="📋" label="Terms & Conditions" onPress={handleTerms} />
         <SettingRow icon="🔒" label="Privacy Policy" onPress={handlePrivacy} />
-        <SettingRow icon="ℹ️" label="About" value="v1.0.0" onPress={() => Alert.alert('ALiN Direct', 'Version 1.0.0\nFast & Reliable Delivery')} />
+        <SettingRow icon="ℹ️" label="About" value="v1.0.0" onPress={() => Alert.alert('ALiN Move', 'Version 1.0.0\nFast & Reliable Delivery')} />
       </View>
 
       {/* Logout */}

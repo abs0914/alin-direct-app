@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Customer App - Notifications Screen
+// ALiN Move Customer App - Notifications Screen
 // ============================================================
 
 import React from 'react';
@@ -24,7 +24,7 @@ const MOCK_NOTIFICATIONS: Notification[] = [
   { id: '1', icon: '📦', title: 'Delivery Picked Up', body: 'Your package has been picked up by the rider and is on the way.', time: '2 min ago', read: false },
   { id: '2', icon: '🚗', title: 'Rider En Route', body: 'Your rider is heading to the pickup location now.', time: '15 min ago', read: false },
   { id: '3', icon: '✅', title: 'Delivery Completed', body: 'Your delivery #ALN-8821 has been delivered successfully.', time: '1 hr ago', read: true },
-  { id: '4', icon: '🎉', title: 'Welcome to ALiN Direct!', body: 'Thanks for joining! Book your first delivery today.', time: '1 day ago', read: true },
+  { id: '4', icon: '🎉', title: 'Welcome to ALiN Move!', body: 'Thanks for joining! Book your first delivery today.', time: '1 day ago', read: true },
   { id: '5', icon: '💰', title: 'Special Offer', body: 'Get 20% off on your next Door-to-Door delivery. Code: ALIN20', time: '2 days ago', read: true },
   { id: '6', icon: '⭐', title: 'Rate Your Delivery', body: 'How was your experience with rider Juan? Leave a rating.', time: '3 days ago', read: true },
 ];

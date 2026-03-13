@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Customer App - Profile Screen
+// ALiN Move Customer App - Profile Screen
 // ============================================================
 
 import React from 'react';
@@ -72,7 +72,7 @@ export default function ProfileScreen() {
         {[
           { iconName: 'notifications-outline' as const, label: 'Notifications', action: () => navigation.navigate('Notifications') },
           { iconName: 'settings-outline' as const, label: 'Settings', action: () => navigation.navigate('Settings') },
-          { iconName: 'information-circle-outline' as const, label: 'About ALiN Direct', action: () => Alert.alert('ALiN Direct', 'Version 1.0.0\nFast & Reliable Delivery') },
+          { iconName: 'information-circle-outline' as const, label: 'About ALiN Move', action: () => Alert.alert('ALiN Move', 'Version 1.0.0\nFast & Reliable Delivery') },
         ].map((item, index) => (
           <TouchableOpacity key={index} style={styles.settingRow} onPress={item.action}>
             <View style={styles.settingIconBox}>

@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Customer App - Supabase Client
+// ALiN Move Customer App - Supabase Client
 // ============================================================
 
 import 'react-native-url-polyfill/auto';

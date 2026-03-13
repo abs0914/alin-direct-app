@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Driver App - Mock Data (Sprint 2: Demo Mode)
+// ALiN Move Driver App - Mock Data (Sprint 2: Demo Mode)
 // ============================================================
 // MOCK: This entire file is mock data for demo purposes.
 // PRODUCTION: Remove this file; real data comes from Supabase/Laravel API.

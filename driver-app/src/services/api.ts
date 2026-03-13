@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Driver App - API Service
+// ALiN Move Driver App - API Service
 // ============================================================
 // Production: Axios HTTP calls to Laravel API with Supabase JWT.
 // The Supabase access_token is sent as Bearer token; the Laravel

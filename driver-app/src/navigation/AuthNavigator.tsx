@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Driver App - Auth Stack Navigator
+// ALiN Move Driver App - Auth Stack Navigator
 // ============================================================
 
 import React from 'react';

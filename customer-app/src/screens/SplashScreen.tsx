@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Customer App - Splash Screen
+// ALiN Move Customer App - Splash Screen
 // ============================================================
 
 import React, { useEffect, useRef } from 'react';

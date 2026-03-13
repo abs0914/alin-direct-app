@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Customer App - Registration Screen
+// ALiN Move Customer App - Registration Screen
 // ============================================================
 
 import React, { useState } from 'react';

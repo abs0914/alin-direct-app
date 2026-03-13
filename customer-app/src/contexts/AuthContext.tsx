@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Customer App - Authentication Context
+// ALiN Move Customer App - Authentication Context
 // ============================================================
 // Uses Supabase Phone OTP auth. On successful verification,
 // fetches customer profile from Laravel backend (auto-provisioned

@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Customer App - Root Navigator
+// ALiN Move Customer App - Root Navigator
 // ============================================================
 
 import React, { useState } from 'react';

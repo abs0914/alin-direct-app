@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Driver App - Notifications Screen
+// ALiN Move Driver App - Notifications Screen
 // ============================================================
 
 import React from 'react';

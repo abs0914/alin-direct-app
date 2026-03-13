@@ -31,7 +31,7 @@ class DemoDataSeeder extends Seeder
             'lng' => 121.0244,
             'service_radius_km' => 15.00,
             'phone' => '+639170000002',
-            'email' => 'makati@alindirect.com',
+            'email' => 'makati@alinmove.com',
             'is_active' => true,
         ]);
 
@@ -45,7 +45,7 @@ class DemoDataSeeder extends Seeder
             'lng' => 123.8854,
             'service_radius_km' => 20.00,
             'phone' => '+639170000003',
-            'email' => 'cebu@alindirect.com',
+            'email' => 'cebu@alinmove.com',
             'is_active' => true,
         ]);
 
@@ -59,14 +59,14 @@ class DemoDataSeeder extends Seeder
             'lng' => 125.6128,
             'service_radius_km' => 10.00,
             'phone' => '+639170000004',
-            'email' => 'davao@alindirect.com',
+            'email' => 'davao@alinmove.com',
             'is_active' => true,
         ]);
 
         $branches = [$hq, $makati, $cebu, $davao];
 
         // ── Branch Managers ────────────────────────────────────────────
-        $makatiMgr = User::firstOrCreate(['email' => 'makati.mgr@alindirect.com'], [
+        $makatiMgr = User::firstOrCreate(['email' => 'makati.mgr@alinmove.com'], [
             'name' => 'Maria Santos',
             'phone' => '+639180000010',
             'password' => bcrypt('password'),
@@ -76,7 +76,7 @@ class DemoDataSeeder extends Seeder
         ]);
         $makatiMgr->assignRole('branch_manager');
 
-        $cebuMgr = User::firstOrCreate(['email' => 'cebu.mgr@alindirect.com'], [
+        $cebuMgr = User::firstOrCreate(['email' => 'cebu.mgr@alinmove.com'], [
             'name' => 'Juan dela Cruz',
             'phone' => '+639180000011',
             'password' => bcrypt('password'),
@@ -87,7 +87,7 @@ class DemoDataSeeder extends Seeder
         $cebuMgr->assignRole('branch_manager');
 
         // ── Dispatchers ────────────────────────────────────────────────
-        $dispatcher1 = User::firstOrCreate(['email' => 'dispatch1@alindirect.com'], [
+        $dispatcher1 = User::firstOrCreate(['email' => 'dispatch1@alinmove.com'], [
             'name' => 'Pedro Reyes',
             'phone' => '+639180000020',
             'password' => bcrypt('password'),
@@ -176,7 +176,7 @@ class DemoDataSeeder extends Seeder
         $this->command->info('✓ Customers seeded');
 
         // ── Delivery Jobs ──────────────────────────────────────────────
-        $admin = User::where('email', 'admin@alindirect.com')->first();
+        $admin = User::where('email', 'admin@alinmove.com')->first();
         $statuses = ['pending', 'broadcasting', 'accepted', 'en_route_pickup', 'picked_up', 'in_transit', 'delivered', 'delivered', 'delivered', 'failed', 'cancelled'];
         $sizes = ['small', 'medium', 'large', 'extra_large'];
         $vehicleTypes = ['motorcycle', 'mpv', 'van', 'truck'];

@@ -1,20 +1,23 @@
 // ============================================================
-// ALiN Direct Driver App - Authentication Context
+// ALiN Move Driver App - Authentication Context
 // ============================================================
-// Uses Supabase Phone OTP auth. On successful verification,
-// fetches rider profile from Laravel backend (auto-provisioned
-// by SupabaseAuth middleware).
+// DEMO_MODE: true  → bypasses Supabase, uses mock data
+// DEMO_MODE: false → real Supabase Phone OTP auth
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import api from '../services/api';
 import { User, Rider } from '../types';
 import { Session } from '@supabase/supabase-js';
+import { MOCK_USER, MOCK_RIDER } from '../data/mockData';
+
+// ---- DEMO FLAG ----
+const DEMO_MODE = true; // Set to false when Supabase is running
 
 interface AuthState {
   user: User | null;
   rider: Rider | null;
-  session: Session | null;
+  session: Session | unknown;
   isLoading: boolean;
   isAuthenticated: boolean;
 }
@@ -50,7 +53,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: true,
       });
     } catch {
-      // Session exists but no rider profile yet (new user)
       setState({
         user: null,
         rider: null,
@@ -61,8 +63,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Bootstrap: check existing session on mount
+  // Bootstrap
   useEffect(() => {
+    if (DEMO_MODE) {
+      setState(prev => ({ ...prev, isLoading: false }));
+      return;
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         loadProfile(session);
@@ -71,7 +78,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // Listen for auth state changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         loadProfile(session);
@@ -89,31 +95,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [loadProfile]);
 
-  const requestOtp = useCallback(async (phone: string) => {
-    const { error } = await supabase.auth.signInWithOtp({ phone });
+  const requestOtp = useCallback(async (_phone: string) => {
+    if (DEMO_MODE) return; // skip — no real SMS
+    const { error } = await supabase.auth.signInWithOtp({ phone: _phone });
     if (error) throw error;
   }, []);
 
-  const verifyOtp = useCallback(async (phone: string, otp: string) => {
+  const verifyOtp = useCallback(async (_phone: string, _otp: string) => {
+    if (DEMO_MODE) {
+      // Accept any OTP, log in with mock data
+      setState({
+        user: MOCK_USER,
+        rider: { ...MOCK_RIDER },
+        session: { demo: true },
+        isLoading: false,
+        isAuthenticated: true,
+      });
+      return;
+    }
     const { error } = await supabase.auth.verifyOtp({
-      phone,
-      token: otp,
+      phone: _phone,
+      token: _otp,
       type: 'sms',
     });
     if (error) throw error;
-    // onAuthStateChange will handle the rest
   }, []);
 
   const register = useCallback(
-    async (regData: { name: string; vehicle_type: string; plate_number?: string }) => {
-      const { user, rider } = await api.registerRider(regData);
+    async (_regData: { name: string; vehicle_type: string; plate_number?: string }) => {
+      if (DEMO_MODE) {
+        setState({
+          user: MOCK_USER,
+          rider: { ...MOCK_RIDER },
+          session: { demo: true },
+          isLoading: false,
+          isAuthenticated: true,
+        });
+        return;
+      }
+      const { user, rider } = await api.registerRider(_regData);
       setState(prev => ({ ...prev, user, rider }));
     },
     []
   );
 
   const logout = useCallback(async () => {
-    await supabase.auth.signOut();
+    if (!DEMO_MODE) {
+      await supabase.auth.signOut();
+    }
     setState({
       user: null,
       rider: null,
@@ -124,6 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshProfile = useCallback(async () => {
+    if (DEMO_MODE) return;
     try {
       const profileData = await api.getProfile();
       setState(prev => ({ ...prev, user: profileData.user, rider: profileData.rider }));

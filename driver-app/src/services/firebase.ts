@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Driver App - Realtime Service (Supabase)
+// ALiN Move Driver App - Realtime Service (Supabase)
 // ============================================================
 
 import { RealtimeChannel } from '@supabase/supabase-js';

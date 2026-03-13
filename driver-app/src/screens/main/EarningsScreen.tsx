@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Driver App - Earnings Screen
+// ALiN Move Driver App - Earnings Screen
 // ============================================================
 
 import React, { useState, useEffect, useCallback } from 'react';

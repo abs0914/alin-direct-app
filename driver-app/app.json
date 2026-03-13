@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "ALiN Direct Driver",
-    "slug": "alin-direct-driver",
+    "name": "ALiN Move Driver",
+    "slug": "alin-move-driver",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "scheme": "alindirect-driver",
+    "scheme": "alinmove-driver",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -15,15 +15,15 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.alindirect.driver",
+      "bundleIdentifier": "com.alinmove.driver",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "ALiN Direct needs your location to show nearby delivery jobs and provide navigation.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "ALiN Direct needs your location to track deliveries in progress.",
-        "NSCameraUsageDescription": "ALiN Direct needs camera access for proof of delivery photos and document uploads."
+        "NSLocationWhenInUseUsageDescription": "ALiN Move needs your location to show nearby delivery jobs and provide navigation.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "ALiN Move needs your location to track deliveries in progress.",
+        "NSCameraUsageDescription": "ALiN Move needs camera access for proof of delivery photos and document uploads."
       }
     },
     "android": {
-      "package": "com.alindirect.driver",
+      "package": "com.alinmove.driver",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#f5a524"
@@ -40,20 +40,20 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "ALiN Direct needs your location to track deliveries in progress.",
-          "locationWhenInUsePermission": "ALiN Direct needs your location to show nearby delivery jobs."
+          "locationAlwaysAndWhenInUsePermission": "ALiN Move needs your location to track deliveries in progress.",
+          "locationWhenInUsePermission": "ALiN Move needs your location to show nearby delivery jobs."
         }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "ALiN Direct needs camera for proof of delivery photos."
+          "cameraPermission": "ALiN Move needs camera for proof of delivery photos."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "ALiN Direct needs photo access for document uploads."
+          "photosPermission": "ALiN Move needs photo access for document uploads."
         }
       ],
       "expo-secure-store"

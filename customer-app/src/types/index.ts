@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Customer App - Core Type Definitions
+// ALiN Move Customer App - Core Type Definitions
 // ============================================================
 
 export interface User {

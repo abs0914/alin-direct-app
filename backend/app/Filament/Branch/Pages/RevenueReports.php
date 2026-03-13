@@ -21,6 +21,16 @@ class RevenueReports extends Page
 
     protected static string $view = 'filament.branch.pages.revenue-reports';
 
+    public static function canAccess(): bool
+    {
+        return Auth::user()?->canManageBranchReports() ?? false;
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::canAccess();
+    }
+
     private function branchQuery()
     {
         $branchId = Auth::user()?->branch_id;

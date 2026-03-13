@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "ALiN Direct",
-    "slug": "alin-direct-customer",
+    "name": "ALiN Move",
+    "slug": "alin-move-customer",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "scheme": "alindirect",
+    "scheme": "alinmove",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -15,13 +15,13 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.alindirect.customer",
+      "bundleIdentifier": "com.alinmove.customer",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "ALiN Direct needs your location to set pickup addresses and track your deliveries."
+        "NSLocationWhenInUseUsageDescription": "ALiN Move needs your location to set pickup addresses and track your deliveries."
       }
     },
     "android": {
-      "package": "com.alindirect.customer",
+      "package": "com.alinmove.customer",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#f5a524"
@@ -36,13 +36,13 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "ALiN Direct needs your location to set pickup addresses."
+          "locationWhenInUsePermission": "ALiN Move needs your location to set pickup addresses."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "ALiN Direct needs photo access for package photos."
+          "photosPermission": "ALiN Move needs photo access for package photos."
         }
       ],
       "expo-secure-store"

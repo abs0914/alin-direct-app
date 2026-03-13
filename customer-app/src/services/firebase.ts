@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Customer App - Realtime Service (Supabase)
+// ALiN Move Customer App - Realtime Service (Supabase)
 // ============================================================
 
 import { RealtimeChannel } from '@supabase/supabase-js';

@@ -34,7 +34,7 @@ class DatabaseSeeder extends Seeder
 
         // 3. Create super admin user
         $admin = User::firstOrCreate(
-            ['email' => 'admin@alindirect.com'],
+            ['email' => 'admin@alinmove.com'],
             [
                 'name' => 'ALiN Admin',
                 'password' => bcrypt('password'),
@@ -47,7 +47,7 @@ class DatabaseSeeder extends Seeder
 
         // 4. Create a test branch manager
         $manager = User::firstOrCreate(
-            ['email' => 'manager@alindirect.com'],
+            ['email' => 'manager@alinmove.com'],
             [
                 'name' => 'Branch Manager',
                 'password' => bcrypt('password'),
@@ -58,7 +58,10 @@ class DatabaseSeeder extends Seeder
         );
         $manager->assignRole('branch_manager');
 
-        // 5. Seed demo data
+        // 5. Seed service catalog (categories & sub-services)
+        $this->call(ServiceCatalogSeeder::class);
+
+        // 6. Seed demo data
         $this->call(DemoDataSeeder::class);
     }
 }

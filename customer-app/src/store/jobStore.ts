@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Customer App - Local Job State Manager
+// ALiN Move Customer App - Local Job State Manager
 // ============================================================
 // Manages local in-memory state for the active booking.
 // Populated from API calls and Supabase Realtime events.

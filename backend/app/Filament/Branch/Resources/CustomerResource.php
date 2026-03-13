@@ -11,6 +11,8 @@ use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 
 class CustomerResource extends Resource
 {
@@ -19,6 +21,41 @@ class CustomerResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-user-group';
 
     protected static ?string $navigationGroup = 'Customers';
+
+    protected static function canAccessResource(): bool
+    {
+        return Auth::user()?->canManageBranchPeople() ?? false;
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::canAccessResource();
+    }
+
+    public static function canViewAny(): bool
+    {
+        return static::canAccessResource();
+    }
+
+    public static function canCreate(): bool
+    {
+        return static::canAccessResource();
+    }
+
+    public static function canView(Model $record): bool
+    {
+        return static::canAccessResource();
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return static::canAccessResource();
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return static::canAccessResource();
+    }
 
     public static function form(Form $form): Form
     {

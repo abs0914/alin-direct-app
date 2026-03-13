@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Driver App - Root Navigator
+// ALiN Move Driver App - Root Navigator
 // ============================================================
 
 import React, { useState } from 'react';

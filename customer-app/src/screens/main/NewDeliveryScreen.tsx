@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Customer App - New Delivery Booking Screen
+// ALiN Move Customer App - New Delivery Booking Screen
 // ============================================================
 // Two-step booking: Step 1 = addresses + package, Step 2 = price + payment.
 // Uses real API pricing from the Laravel backend.

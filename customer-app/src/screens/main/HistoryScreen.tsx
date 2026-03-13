@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Customer App - Delivery History Screen
+// ALiN Move Customer App - Delivery History Screen
 // ============================================================
 
 import React, { useState, useEffect, useCallback } from 'react';

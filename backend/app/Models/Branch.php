@@ -51,5 +51,25 @@ class Branch extends Model
     {
         return $this->hasMany(DeliveryJob::class);
     }
+
+    public function salesTransactions()
+    {
+        return $this->hasMany(SalesTransaction::class);
+    }
+
+    public function expenses()
+    {
+        return $this->hasMany(Expense::class);
+    }
+
+    public function dailyClosings()
+    {
+        return $this->hasMany(DailyClosing::class);
+    }
+
+    public function attendances()
+    {
+        return $this->hasMany(Attendance::class);
+    }
 }
 

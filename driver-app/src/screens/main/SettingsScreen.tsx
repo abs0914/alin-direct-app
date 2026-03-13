@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Driver App - Settings Screen
+// ALiN Move Driver App - Settings Screen
 // ============================================================
 
 import React from 'react';
@@ -90,10 +90,10 @@ export default function SettingsScreen() {
       <Text style={styles.sectionHeader}>Account & Support</Text>
       <View style={styles.section}>
         <SettingRow icon="clipboard" label="Documents" onPress={() => Alert.alert('Documents', 'View and manage your KYC documents.')} />
-        <SettingRow icon="help-circle" label="Help & Support" onPress={() => Linking.openURL('mailto:driver-support@alindirect.com')} />
-        <SettingRow icon="document-text" label="Terms & Conditions" onPress={() => Alert.alert('Terms', 'Terms available at alindirect.com/driver-terms')} />
-        <SettingRow icon="lock-closed" label="Privacy Policy" onPress={() => Alert.alert('Privacy', 'Privacy policy at alindirect.com/privacy')} />
-        <SettingRow icon="information-circle" label="About" value="v1.0.0" onPress={() => Alert.alert('ALiN Direct Driver', 'Version 1.0.0\nPartner Driver Portal')} />
+        <SettingRow icon="help-circle" label="Help & Support" onPress={() => Linking.openURL('mailto:driver-support@alinmove.com')} />
+        <SettingRow icon="document-text" label="Terms & Conditions" onPress={() => Alert.alert('Terms', 'Terms available at alinmove.com/driver-terms')} />
+        <SettingRow icon="lock-closed" label="Privacy Policy" onPress={() => Alert.alert('Privacy', 'Privacy policy at alinmove.com/privacy')} />
+        <SettingRow icon="information-circle" label="About" value="v1.0.0" onPress={() => Alert.alert('ALiN Move Driver', 'Version 1.0.0\nPartner Driver Portal')} />
       </View>
 
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>

@@ -6,6 +6,7 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationGroup;
 use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -26,9 +27,9 @@ class BranchPanelProvider extends PanelProvider
             ->id('branch')
             ->path('branch')
             ->login()
-            ->brandName('ALiN Direct Branch')
-            ->brandLogo(asset('images/ALiN Direct.png'))
-            ->brandLogoHeight('5.5rem')
+            ->brandName('ALiN Move Branch')
+            ->brandLogo(asset('images/ALiN Move.png'))
+            ->brandLogoHeight('3rem')
             ->darkMode(false)
             ->colors([
                 'primary' => [
@@ -52,13 +53,13 @@ class BranchPanelProvider extends PanelProvider
             ->sidebarCollapsibleOnDesktop()
             ->sidebarWidth('16rem')
             ->navigationGroups([
-                'Dashboard',
-                'Operations',
-                'Riders',
-                'Customers',
-                'Finance',
-                'Reports & Analytics',
-                'Settings',
+                NavigationGroup::make('Dashboard')->collapsed(),
+                NavigationGroup::make('Operations')->collapsed(),
+                NavigationGroup::make('Riders')->collapsed(),
+                NavigationGroup::make('Customers')->collapsed(),
+                NavigationGroup::make('Finance')->collapsed(),
+                NavigationGroup::make('Reports & Analytics')->collapsed(),
+                NavigationGroup::make('Settings')->collapsed(),
             ])
             ->discoverResources(in: app_path('Filament/Branch/Resources'), for: 'App\\Filament\\Branch\\Resources')
             ->discoverPages(in: app_path('Filament/Branch/Pages'), for: 'App\\Filament\\Branch\\Pages')
@@ -73,7 +74,7 @@ class BranchPanelProvider extends PanelProvider
             )
             ->renderHook(
                 \Filament\View\PanelsRenderHook::TOPBAR_START,
-                fn () => '<div style="font-size: 1.1rem; font-weight: 700; color: #111827; white-space: nowrap;">ALiN Cargo Express Taguig Branch</div>'
+                fn () => '<div style="font-size: 1.1rem; font-weight: 700; color: #111827; white-space: nowrap;">ALiN Move Branch Portal</div>'
             )
             ->middleware([
                 EncryptCookies::class,

@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Driver App - Application Status Screen
+// ALiN Move Driver App - Application Status Screen
 // ============================================================
 
 import React from 'react';
@@ -76,7 +76,7 @@ export default function ApplicationStatusScreen() {
         <Ionicons name="call" size={24} color={Colors.primary} style={{ marginRight: 12 }} />
         <View style={styles.infoContent}>
           <Text style={styles.infoTitle}>Need Help?</Text>
-          <Text style={styles.infoText}>Contact support at support@alindirect.com or call (02) 8888-ALIN</Text>
+          <Text style={styles.infoText}>Contact support at support@alinmove.com or call (02) 8888-ALIN</Text>
         </View>
       </View>
 

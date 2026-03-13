@@ -1,4 +1,4 @@
-# ALiN Direct Delivery Platform - Comprehensive Project Plan
+# ALiN Move Delivery Platform - Comprehensive Project Plan
 
 **Version:** 2.0  
 **Status:** Approved for Implementation  

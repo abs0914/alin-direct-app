@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Driver App - Login Screen (OTP)
+// ALiN Move Driver App - Login Screen (OTP)
 // ============================================================
 
 import React, { useState, useRef } from 'react';

@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Customer App - Color Theme
+// ALiN Move Customer App - Color Theme
 // ============================================================
 
 const Colors = {

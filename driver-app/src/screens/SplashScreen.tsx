@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Driver App - Splash Screen
+// ALiN Move Driver App - Splash Screen
 // ============================================================
 
 import React, { useEffect, useRef } from 'react';

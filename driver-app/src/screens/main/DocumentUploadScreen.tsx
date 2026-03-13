@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Driver App - KYC Document Upload Screen
+// ALiN Move Driver App - KYC Document Upload Screen
 // ============================================================
 
 import React, { useState } from 'react';

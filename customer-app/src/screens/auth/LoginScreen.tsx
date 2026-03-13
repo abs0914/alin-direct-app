@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Customer App - Login Screen (OTP)
+// ALiN Move Customer App - Login Screen (OTP)
 // ============================================================
 
 import React, { useState, useRef } from 'react';

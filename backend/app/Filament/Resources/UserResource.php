@@ -21,6 +21,20 @@ class UserResource extends Resource
 
     protected static ?string $navigationGroup = 'Users & Access';
 
+    public static function getUserTypeOptions(): array
+    {
+        return [
+            'admin' => 'Admin',
+            'hq_admin' => 'HQ Admin',
+            'branch_owner' => 'Branch Owner',
+            'branch_manager' => 'Branch Manager',
+            'staff' => 'Staff',
+            'dispatcher' => 'Legacy Dispatcher',
+            'rider' => 'Rider',
+            'customer' => 'Customer',
+        ];
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -38,13 +52,7 @@ class UserResource extends Resource
                             ->tel()
                             ->unique(ignoreRecord: true),
                         Forms\Components\Select::make('user_type')
-                            ->options([
-                                'admin' => 'Admin',
-                                'branch_manager' => 'Branch Manager',
-                                'dispatcher' => 'Dispatcher',
-                                'rider' => 'Rider',
-                                'customer' => 'Customer',
-                            ])
+                            ->options(static::getUserTypeOptions())
                             ->required(),
                         Forms\Components\Select::make('branch_id')
                             ->relationship('branch', 'name')
@@ -86,8 +94,11 @@ class UserResource extends Resource
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'admin' => 'danger',
+                        'hq_admin' => 'warning',
+                        'branch_owner' => 'success',
                         'branch_manager' => 'primary',
                         'dispatcher' => 'info',
+                        'staff' => 'gray',
                         'rider' => 'success',
                         'customer' => 'warning',
                         default => 'gray',
@@ -104,13 +115,7 @@ class UserResource extends Resource
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('user_type')
-                    ->options([
-                        'admin' => 'Admin',
-                        'branch_manager' => 'Branch Manager',
-                        'dispatcher' => 'Dispatcher',
-                        'rider' => 'Rider',
-                        'customer' => 'Customer',
-                    ]),
+                    ->options(static::getUserTypeOptions()),
                 Tables\Filters\SelectFilter::make('branch')
                     ->relationship('branch', 'name'),
                 Tables\Filters\TernaryFilter::make('is_active')

@@ -27,8 +27,8 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('hq')
             ->login()
-            ->brandName('ALiN Direct HQ')
-            ->brandLogo(asset('images/ALiN Direct.png'))
+            ->brandName('ALiN Move HQ')
+            ->brandLogo(asset('images/ALiN Move.png'))
             ->brandLogoHeight('5.5rem')
             ->darkMode(false)
             ->colors([
@@ -74,7 +74,7 @@ class AdminPanelProvider extends PanelProvider
             )
             ->renderHook(
                 \Filament\View\PanelsRenderHook::TOPBAR_START,
-                fn () => '<div style="font-size: 1.1rem; font-weight: 700; color: #111827; white-space: nowrap;">ALiN Direct Management Portal</div>'
+                fn () => '<div style="font-size: 1.1rem; font-weight: 700; color: #111827; white-space: nowrap;">ALiN Move Management Portal</div>'
             )
             ->middleware([
                 EncryptCookies::class,

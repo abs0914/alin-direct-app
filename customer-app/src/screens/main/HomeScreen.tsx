@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Customer App - Home Screen
+// ALiN Move Customer App - Home Screen
 // ============================================================
 // Choose Delivery Service screen per PDF spec.
 // Fetches active booking from the API and listens for real-time

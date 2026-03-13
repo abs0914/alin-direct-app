@@ -1,5 +1,5 @@
 // ============================================================
-// ALiN Direct Driver App - Local Job State Manager
+// ALiN Move Driver App - Local Job State Manager
 // ============================================================
 // Manages local in-memory state for active job and incoming
 // offers. Populated from API calls and Supabase Realtime events.
