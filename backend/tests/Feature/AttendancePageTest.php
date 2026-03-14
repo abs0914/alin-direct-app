@@ -17,6 +17,8 @@ class AttendancePageTest extends TestCase
 {
     use RefreshDatabase;
 
+    private const CAMERA_IMAGE_DATA_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wn7ZxQAAAAASUVORK5CYII=';
+
     public function test_staff_can_check_in_and_check_out_from_branch_attendance_page(): void
     {
         Storage::fake('public');
@@ -94,5 +96,41 @@ class AttendancePageTest extends TestCase
         $this->assertFalse(DailySummary::canAccess());
         $this->assertTrue($staff->canAccessBranchPortal());
         $this->assertFalse($staff->canManageBranchFinancials());
+    }
+
+    public function test_staff_can_check_in_using_camera_capture_data(): void
+    {
+        Storage::fake('public');
+
+        $branch = Branch::query()->create([
+            'name' => 'Camera Branch',
+            'code' => 'CM-001',
+            'type' => 'branch',
+            'address' => 'Test Address',
+            'city' => 'Test City',
+            'province' => 'Test Province',
+            'is_active' => true,
+        ]);
+
+        $user = User::factory()->create([
+            'branch_id' => $branch->id,
+            'user_type' => 'staff',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(Attendance::class)
+            ->set('data.image_data', self::CAMERA_IMAGE_DATA_URL)
+            ->set('data.notes', 'Captured via webcam')
+            ->call('submit');
+
+        $attendance = AttendanceRecord::query()->first();
+
+        $this->assertNotNull($attendance);
+        $this->assertSame('checked_in', $attendance->status);
+        $this->assertNotNull($attendance->check_in_image_path);
+        $this->assertStringStartsWith('attendance/', $attendance->check_in_image_path);
+        Storage::disk('public')->assertExists($attendance->check_in_image_path);
     }
 }

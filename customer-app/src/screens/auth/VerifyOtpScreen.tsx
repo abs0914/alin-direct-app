@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { useAuth } from '../../contexts/AuthContext';
+import { OTP_TEST_MODE, useAuth } from '../../contexts/AuthContext';
 import Colors from '../../theme/colors';
 import Config from '../../config';
 
@@ -79,6 +79,9 @@ export default function VerifyOtpScreen({ navigation, route }: Props) {
       <View style={styles.content}>
         <Text style={styles.title}>Verify Your Number</Text>
         <Text style={styles.subtitle}>Enter the {Config.OTP_LENGTH}-digit code sent to{'\n'}<Text style={styles.phone}>{phone}</Text></Text>
+        {OTP_TEST_MODE ? (
+          <Text style={styles.helperText}>Test mode: enter any {Config.OTP_LENGTH}-digit OTP.</Text>
+        ) : null}
 
         <TextInput
           ref={inputRef} style={styles.otpInput} value={otp} onChangeText={setOtp}
@@ -113,6 +116,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: '700', color: Colors.text, textAlign: 'center' },
   subtitle: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', marginTop: 8, marginBottom: 32, lineHeight: 22 },
   phone: { fontWeight: '600', color: Colors.text },
+  helperText: { fontSize: 12, color: Colors.textSecondary, textAlign: 'center', marginTop: -16, marginBottom: 16 },
   otpInput: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 12, paddingVertical: 16, fontSize: 28, fontWeight: '700', letterSpacing: 12, color: Colors.text, marginBottom: 24 },
   button: { backgroundColor: Colors.primary, paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
   buttonDisabled: { opacity: 0.6 },

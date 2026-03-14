@@ -27,6 +27,7 @@ import {
 } from '../../store/jobStore';
 import Colors from '../../theme/colors';
 import { DeliveryJob } from '../../types';
+import LiveMap from '../../components/LiveMap';
 
 type Props = {
   navigation: NativeStackNavigationProp<HomeStackParamList, 'Tracking'>;
@@ -162,16 +163,33 @@ export default function TrackingScreen({ navigation, route }: Props) {
         </View>
       )}
 
-      {/* Live Location Indicator */}
-      {driverLat !== null && !isTerminal && (
-        <View style={styles.locationCard}>
-          <Ionicons name="radio-button-on" size={14} color={Colors.primary} style={{ marginRight: 8 }} />
-          <Text style={styles.locationText}>
-            Driver is live at ({driverLat.toFixed(4)}, {driverLng?.toFixed(4)})
-            {lastGPSUpdate && ` • ${Math.round((Date.now() - lastGPSUpdate) / 1000)}s ago`}
-          </Text>
+      {/* Live Map — always shown; rider dot appears once GPS starts */}
+      <View style={styles.mapCard}>
+        <View style={styles.mapHeader}>
+          <Ionicons name="map-outline" size={14} color={Colors.textSecondary} />
+          <Text style={styles.mapHeaderText}>Live Tracking Map</Text>
+          {driverLat !== null && !isTerminal && (
+            <View style={styles.liveChip}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveText}>LIVE</Text>
+            </View>
+          )}
         </View>
-      )}
+        <LiveMap
+          pickupLat={job.pickup_lat ?? 14.6000}
+          pickupLng={job.pickup_lng ?? 120.9833}
+          dropoffLat={job.dropoff_lat ?? 14.5547}
+          dropoffLng={job.dropoff_lng ?? 121.0244}
+          riderLat={driverLat}
+          riderLng={driverLng}
+          height={220}
+        />
+        {lastGPSUpdate && driverLat !== null && (
+          <Text style={styles.gpsAge}>
+            Updated {Math.round((Date.now() - lastGPSUpdate) / 1000)}s ago
+          </Text>
+        )}
+      </View>
 
       {/* Addresses */}
       <View style={styles.addressCard}>
@@ -250,9 +268,13 @@ const styles = StyleSheet.create({
   driverPlate: { fontSize: 12, color: Colors.textLight, marginTop: 2, fontWeight: '600' },
   callButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.success, justifyContent: 'center', alignItems: 'center' },
 
-  locationCard: { backgroundColor: Colors.primaryBg, borderRadius: 8, padding: 10, flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-
-  locationText: { fontSize: 12, color: Colors.primary, fontWeight: '500', flex: 1 },
+  mapCard: { backgroundColor: Colors.surface, borderRadius: 12, marginBottom: 12, overflow: 'hidden' },
+  mapHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, padding: 10, paddingBottom: 6 },
+  mapHeaderText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, flex: 1 },
+  liveChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FEF3C7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.primary },
+  liveText: { fontSize: 10, fontWeight: '700', color: Colors.primary },
+  gpsAge: { fontSize: 11, color: Colors.textLight, textAlign: 'right', padding: 6, paddingTop: 4 },
   addressCard: { backgroundColor: Colors.surface, borderRadius: 12, padding: 16, marginBottom: 12 },
   addressRow: { flexDirection: 'row', alignItems: 'flex-start' },
 

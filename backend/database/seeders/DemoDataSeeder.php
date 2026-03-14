@@ -4,14 +4,19 @@ namespace Database\Seeders;
 
 use App\Models\Branch;
 use App\Models\Customer;
+use App\Models\DailyClosing;
 use App\Models\DeliveryJob;
+use App\Models\Expense;
 use App\Models\JobOffer;
 use App\Models\Payment;
 use App\Models\PayoutRequest;
 use App\Models\ProofOfDelivery;
 use App\Models\Rider;
+use App\Models\SalesTransaction;
+use App\Models\Service;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 class DemoDataSeeder extends Seeder
@@ -66,36 +71,37 @@ class DemoDataSeeder extends Seeder
         $branches = [$hq, $makati, $cebu, $davao];
 
         // ── Branch Managers ────────────────────────────────────────────
-        $makatiMgr = User::firstOrCreate(['email' => 'makati.mgr@alinmove.com'], [
+        // Use phone as the primary unique key to survive re-seeding across email renames.
+        $makatiMgr = User::firstOrCreate(['phone' => '+639180000010'], [
             'name' => 'Maria Santos',
-            'phone' => '+639180000010',
+            'email' => 'makati.mgr@alinmove.com',
             'password' => bcrypt('password'),
             'user_type' => 'branch_manager',
             'is_active' => true,
             'branch_id' => $makati->id,
         ]);
-        $makatiMgr->assignRole('branch_manager');
+        if (!$makatiMgr->hasRole('branch_manager')) $makatiMgr->assignRole('branch_manager');
 
-        $cebuMgr = User::firstOrCreate(['email' => 'cebu.mgr@alinmove.com'], [
+        $cebuMgr = User::firstOrCreate(['phone' => '+639180000011'], [
             'name' => 'Juan dela Cruz',
-            'phone' => '+639180000011',
+            'email' => 'cebu.mgr@alinmove.com',
             'password' => bcrypt('password'),
             'user_type' => 'branch_manager',
             'is_active' => true,
             'branch_id' => $cebu->id,
         ]);
-        $cebuMgr->assignRole('branch_manager');
+        if (!$cebuMgr->hasRole('branch_manager')) $cebuMgr->assignRole('branch_manager');
 
         // ── Dispatchers ────────────────────────────────────────────────
-        $dispatcher1 = User::firstOrCreate(['email' => 'dispatch1@alinmove.com'], [
+        $dispatcher1 = User::firstOrCreate(['phone' => '+639180000020'], [
             'name' => 'Pedro Reyes',
-            'phone' => '+639180000020',
+            'email' => 'dispatch1@alinmove.com',
             'password' => bcrypt('password'),
             'user_type' => 'dispatcher',
             'is_active' => true,
             'branch_id' => $makati->id,
         ]);
-        $dispatcher1->assignRole('dispatcher');
+        if (!$dispatcher1->hasRole('dispatcher')) $dispatcher1->assignRole('dispatcher');
 
         // ── Rider Users & Riders ───────────────────────────────────────
         $riderData = [
@@ -111,15 +117,15 @@ class DemoDataSeeder extends Seeder
 
         $riders = [];
         foreach ($riderData as $rd) {
-            $rUser = User::firstOrCreate(['email' => $rd['email']], [
+            $rUser = User::firstOrCreate(['phone' => $rd['phone']], [
                 'name' => $rd['name'],
-                'phone' => $rd['phone'],
+                'email' => $rd['email'],
                 'password' => bcrypt('password'),
                 'user_type' => 'rider',
                 'is_active' => true,
                 'branch_id' => $rd['branch']->id,
             ]);
-            $rUser->assignRole('rider');
+            if (!$rUser->hasRole('rider')) $rUser->assignRole('rider');
 
             $riders[] = Rider::firstOrCreate(['user_id' => $rUser->id], [
                 'branch_id' => $rd['branch']->id,
@@ -155,14 +161,14 @@ class DemoDataSeeder extends Seeder
 
         $customers = [];
         foreach ($customerData as $cd) {
-            $cUser = User::firstOrCreate(['email' => $cd['email']], [
+            $cUser = User::firstOrCreate(['phone' => $cd['phone']], [
                 'name' => $cd['name'],
-                'phone' => $cd['phone'],
+                'email' => $cd['email'],
                 'password' => bcrypt('password'),
                 'user_type' => 'customer',
                 'is_active' => true,
             ]);
-            $cUser->assignRole('customer');
+            if (!$cUser->hasRole('customer')) $cUser->assignRole('customer');
 
             $customers[] = Customer::firstOrCreate(['user_id' => $cUser->id], [
                 'company_name' => $cd['company'],
@@ -372,6 +378,130 @@ class DemoDataSeeder extends Seeder
         }
 
         $this->command->info('✓ Payout Requests seeded');
+
+        // ── Branch Operations: Sales, Expenses, Daily Closings ─────────
+        $services = Service::all();
+        if ($services->isEmpty()) {
+            $this->command->warn('⚠ No services found — skipping operations demo data.');
+        } else {
+            $paymentMethods = ['cash', 'gcash', 'maya', 'bank_transfer'];
+            $expenseCategories = ['supplies', 'utilities', 'maintenance', 'rent', 'other'];
+            $expenseVendors = ['SM Stationery', 'Meralco', 'Globe', 'Ace Hardware', 'Manila Water', 'National Bookstore'];
+            $customerNames = ['Ana Mercado', 'Roberto Lim', 'FreshMart PH', 'Torres Logistics', 'Sophia Garcia', 'Walk-in Customer'];
+            $opBranches = [$makati, $cebu];
+            $opManagers = [$makatiMgr, $cebuMgr];
+            $daysBack = 14;
+
+            foreach ($opBranches as $idx => $branch) {
+                $mgr = $opManagers[$idx];
+
+                for ($d = $daysBack; $d >= 0; $d--) {
+                    $businessDate = Carbon::today()->subDays($d);
+
+                    // Skip if already exists (idempotent)
+                    $existing = DailyClosing::where('branch_id', $branch->id)
+                        ->where('business_date', $businessDate->toDateString())
+                        ->first();
+                    if ($existing) continue;
+
+                    $openingBalance = rand(2000, 5000);
+                    $numSales = rand(4, 9);
+                    $numExpenses = rand(1, 4);
+                    $cashSales = 0;
+                    $digitalSales = 0;
+                    $cashExpenses = 0;
+                    $digitalExpenses = 0;
+
+                    // Create DailyClosing (open first; we'll update totals after)
+                    $isClosed = $d > 0; // today stays open for demo
+                    $closing = DailyClosing::create([
+                        'branch_id'          => $branch->id,
+                        'business_date'      => $businessDate->toDateString(),
+                        'opening_balance'    => $openingBalance,
+                        'total_cash_sales'   => 0,
+                        'total_digital_sales'=> 0,
+                        'total_cash_expenses'=> 0,
+                        'total_digital_expenses' => 0,
+                        'expected_cash'      => $openingBalance,
+                        'actual_cash'        => $openingBalance,
+                        'variance'           => 0,
+                        'status'             => $isClosed ? 'closed' : 'open',
+                        'closed_by'          => $isClosed ? $mgr->id : null,
+                        'closed_at'          => $isClosed ? $businessDate->copy()->setTime(18, rand(0, 59)) : null,
+                        'manager_notes'      => $isClosed ? 'End-of-day closing complete.' : null,
+                    ]);
+
+                    // Sales Transactions for this day
+                    for ($s = 0; $s < $numSales; $s++) {
+                        $service = $services->random();
+                        $amount = rand(50, 800);
+                        $method = $paymentMethods[array_rand($paymentMethods)];
+                        $txTime = $businessDate->copy()->setTime(rand(8, 17), rand(0, 59));
+
+                        SalesTransaction::create([
+                            'branch_id'        => $branch->id,
+                            'service_id'       => $service->id,
+                            'amount'           => $amount,
+                            'payment_method'   => $method,
+                            'reference_number' => 'TXN-' . strtoupper(Str::random(8)),
+                            'customer_name'    => $customerNames[array_rand($customerNames)],
+                            'created_by'       => $mgr->id,
+                            'daily_closing_id' => $closing->id,
+                            'notes'            => null,
+                            'created_at'       => $txTime,
+                            'updated_at'       => $txTime,
+                        ]);
+
+                        if ($method === 'cash') $cashSales += $amount;
+                        else $digitalSales += $amount;
+                    }
+
+                    // Expenses for this day
+                    for ($e = 0; $e < $numExpenses; $e++) {
+                        $amount = rand(100, 1500);
+                        $method = rand(0, 1) ? 'cash' : 'gcash';
+                        $expTime = $businessDate->copy()->setTime(rand(8, 17), rand(0, 59));
+
+                        Expense::create([
+                            'branch_id'        => $branch->id,
+                            'category'         => $expenseCategories[array_rand($expenseCategories)],
+                            'vendor_name'      => $expenseVendors[array_rand($expenseVendors)],
+                            'amount'           => $amount,
+                            'payment_method'   => $method,
+                            'reference_number' => 'EXP-' . strtoupper(Str::random(8)),
+                            'description'      => 'Branch operational expense',
+                            'receipt_path'     => null,
+                            'created_by'       => $mgr->id,
+                            'daily_closing_id' => $closing->id,
+                            'created_at'       => $expTime,
+                            'updated_at'       => $expTime,
+                        ]);
+
+                        if ($method === 'cash') $cashExpenses += $amount;
+                        else $digitalExpenses += $amount;
+                    }
+
+                    // Update closing totals
+                    $expectedCash = $openingBalance + $cashSales - $cashExpenses;
+                    $actualCash   = $expectedCash + rand(-200, 200); // small variance
+                    $closing->update([
+                        'total_cash_sales'       => $cashSales,
+                        'total_digital_sales'    => $digitalSales,
+                        'total_cash_expenses'    => $cashExpenses,
+                        'total_digital_expenses' => $digitalExpenses,
+                        'expected_cash'          => $expectedCash,
+                        'actual_cash'            => $actualCash,
+                        'variance'               => $actualCash - $expectedCash,
+                    ]);
+                }
+            }
+
+            $totalClosings = DailyClosing::count();
+            $totalSales = SalesTransaction::count();
+            $totalExpenses = Expense::count();
+            $this->command->info("✓ {$totalClosings} Daily Closings, {$totalSales} Sales Transactions, {$totalExpenses} Expenses seeded");
+        }
+
         $this->command->info('');
         $this->command->info('🎉 Demo data seeding complete!');
         $this->command->info('   - 4 Branches (HQ + 3)');
@@ -379,6 +509,7 @@ class DemoDataSeeder extends Seeder
         $this->command->info('   - 6 Customers');
         $this->command->info('   - 30 Delivery Jobs');
         $this->command->info('   - Job Offers, Payments, PODs, Payouts');
+        $this->command->info('   - 14 days of Sales, Expenses & Daily Closings (Makati + Cebu)');
     }
 }
 

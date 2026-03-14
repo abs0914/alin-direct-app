@@ -17,6 +17,7 @@ import {
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
+import { HomeStackParamList } from '../../navigation/MainNavigator';
 import api from '../../services/api';
 import {
   addJobListener,
@@ -28,14 +29,32 @@ import {
 } from '../../store/jobStore';
 import Colors from '../../theme/colors';
 import { DeliveryJob } from '../../types';
-
-export type ActiveJobParamList = {
-  ActiveJob: { jobId: number };
-};
+import LiveMap from '../../components/LiveMap';
 
 type Props = {
-  navigation: NativeStackNavigationProp<ActiveJobParamList, 'ActiveJob'>;
-  route: RouteProp<ActiveJobParamList, 'ActiveJob'>;
+  navigation: NativeStackNavigationProp<HomeStackParamList, 'ActiveJob'>;
+  route: RouteProp<HomeStackParamList, 'ActiveJob'>;
+};
+
+// Simulated GPS route: Manila (Sta. Cruz) → Makati (Ayala Ave)
+const SIMULATED_ROUTE = [
+  { lat: 14.6000, lng: 120.9833 },
+  { lat: 14.5950, lng: 120.9850 },
+  { lat: 14.5900, lng: 120.9880 },
+  { lat: 14.5850, lng: 120.9920 },
+  { lat: 14.5800, lng: 120.9960 },
+  { lat: 14.5750, lng: 121.0000 },
+  { lat: 14.5700, lng: 121.0050 },
+  { lat: 14.5660, lng: 121.0100 },
+  { lat: 14.5620, lng: 121.0150 },
+  { lat: 14.5580, lng: 121.0200 },
+  { lat: 14.5547, lng: 121.0244 },
+];
+
+// Map each job status to a position along the route
+const STATUS_TO_ROUTE_IDX: Record<string, number> = {
+  accepted: 0, en_route_pickup: 1, at_pickup: 2,
+  picked_up: 4, in_transit: 6, at_dropoff: 9, delivered: 10,
 };
 
 const STATUS_STEPS = [
@@ -69,6 +88,12 @@ export default function ActiveJobScreen({ navigation, route }: Props) {
     if (!job) return;
     const nextStatus = getNextStatus(job.status);
     if (!nextStatus) return;
+
+    // At dropoff → navigate to POD screen instead of advancing directly
+    if (job.status === 'at_dropoff') {
+      navigation.navigate('ProofOfDelivery', { jobId: job.id });
+      return;
+    }
 
     setIsAdvancing(true);
     try {
@@ -152,6 +177,17 @@ export default function ActiveJobScreen({ navigation, route }: Props) {
         </View>
       </View>
 
+      {/* Live Route Map */}
+      <LiveMap
+        pickupLat={job.pickup_lat ?? 14.6000}
+        pickupLng={job.pickup_lng ?? 120.9833}
+        dropoffLat={job.dropoff_lat ?? 14.5547}
+        dropoffLng={job.dropoff_lng ?? 121.0244}
+        riderLat={SIMULATED_ROUTE[STATUS_TO_ROUTE_IDX[job.status] ?? 0].lat}
+        riderLng={SIMULATED_ROUTE[STATUS_TO_ROUTE_IDX[job.status] ?? 0].lng}
+        height={220}
+      />
+
       {/* Package Info */}
       <View style={styles.packageCard}>
         <Text style={styles.packageTitle}><Ionicons name="cube" size={14} color={Colors.text} /> Package</Text>
@@ -186,10 +222,12 @@ export default function ActiveJobScreen({ navigation, route }: Props) {
         })}
       </View>
 
-      {/* POD placeholder for delivered status */}
+      {/* POD call-to-action */}
       {job.status === 'at_dropoff' && (
         <View style={styles.podHint}>
-          <Text style={styles.podHintText}><Ionicons name="camera" size={14} color={Colors.primary} /> Tap "Complete Delivery" to confirm POD (photo capture coming in Sprint 3)</Text>
+          <Text style={styles.podHintText}>
+            <Ionicons name="camera" size={14} color={Colors.primary} /> Tap "Complete Delivery" to capture photo proof and confirm delivery.
+          </Text>
         </View>
       )}
 

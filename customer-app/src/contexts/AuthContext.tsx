@@ -1,15 +1,27 @@
 // ============================================================
 // ALiN Move Customer App - Authentication Context
 // ============================================================
-// Uses Supabase Phone OTP auth. On successful verification,
-// fetches customer profile from Laravel backend (auto-provisioned
-// by SupabaseAuth middleware).
+// OTP_TEST_MODE: true  → bypasses Supabase SMS and accepts any 6-digit OTP locally.
+// OTP_TEST_MODE: false → real Supabase Phone OTP auth.
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import api from '../services/api';
 import { User, Customer } from '../types';
 import { Session } from '@supabase/supabase-js';
+import { MOCK_USER, MOCK_CUSTOMER } from '../data/mockData';
+import { resetDemoState } from '../store/jobStore';
+
+export const OTP_TEST_MODE = true; // Set to false when Supabase is running
+
+const createDemoUser = (phone: string): User => ({
+  ...MOCK_USER,
+  phone,
+});
+
+const createDemoCustomer = (): Customer => ({
+  ...MOCK_CUSTOMER,
+});
 
 interface AuthState {
   user: User | null;
@@ -63,6 +75,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Bootstrap: check existing session on mount
   useEffect(() => {
+    if (OTP_TEST_MODE) {
+      setState(prev => ({ ...prev, isLoading: false }));
+      return;
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         loadProfile(session);
@@ -90,11 +107,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadProfile]);
 
   const requestOtp = useCallback(async (phone: string) => {
+    if (OTP_TEST_MODE) return;
+
     const { error } = await supabase.auth.signInWithOtp({ phone });
     if (error) throw error;
   }, []);
 
   const verifyOtp = useCallback(async (phone: string, otp: string) => {
+    if (OTP_TEST_MODE) {
+      setState({
+        user: createDemoUser(phone),
+        customer: createDemoCustomer(),
+        session: { demo: true },
+        isLoading: false,
+        isAuthenticated: true,
+      });
+      return;
+    }
+
     const { error } = await supabase.auth.verifyOtp({
       phone,
       token: otp,
@@ -106,6 +136,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(
     async (regData: { name: string; email?: string }) => {
+      if (OTP_TEST_MODE) {
+        setState({
+          user: {
+            ...createDemoUser(MOCK_USER.phone),
+            name: regData.name,
+            email: regData.email ?? null,
+          },
+          customer: createDemoCustomer(),
+          session: { demo: true },
+          isLoading: false,
+          isAuthenticated: true,
+        });
+        return;
+      }
+
       const { user, customer } = await api.registerCustomer(regData);
       setState(prev => ({ ...prev, user, customer }));
     },
@@ -113,7 +158,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    await supabase.auth.signOut();
+    if (!OTP_TEST_MODE) {
+      await supabase.auth.signOut();
+    }
+
+    // Reset in-memory demo delivery state for a clean next session
+    resetDemoState();
+
     setState({
       user: null,
       customer: null,
@@ -124,6 +175,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshProfile = useCallback(async () => {
+    if (OTP_TEST_MODE) return;
+
     try {
       const profileData = await api.getProfile();
       setState(prev => ({ ...prev, user: profileData.user, customer: profileData.customer }));

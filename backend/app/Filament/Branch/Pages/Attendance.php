@@ -10,6 +10,8 @@ use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class Attendance extends Page implements HasForms
 {
@@ -53,8 +55,10 @@ class Attendance extends Page implements HasForms
                         ? 'Take a selfie to complete your check-out timestamp.'
                         : 'Take a selfie to start your shift and save the check-in timestamp.')
                     ->schema([
+                        Forms\Components\Hidden::make('image_data'),
                         Forms\Components\FileUpload::make('image')
-                            ->label($this->activeAttendanceRecord() ? 'Check-out Selfie' : 'Check-in Selfie')
+                            ->label('Upload Existing Photo')
+                            ->helperText('Use this only if your camera is unavailable. The camera panel above is recommended for attendance.')
                             ->image()
                             ->disk('public')
                             ->directory('attendance')
@@ -65,7 +69,7 @@ class Attendance extends Page implements HasForms
                                 'capture' => 'user',
                             ])
                             ->maxSize(5120)
-                            ->required(),
+                            ->required(fn (Forms\Get $get): bool => blank($get('image_data'))),
                         Forms\Components\Textarea::make('notes')
                             ->rows(3)
                             ->placeholder('Optional notes for this attendance record.')
@@ -91,6 +95,17 @@ class Attendance extends Page implements HasForms
 
         $data = $this->form->getState();
         $activeAttendance = $this->activeAttendanceRecord();
+        $imagePath = $this->resolveImagePath($data);
+
+        if (blank($imagePath)) {
+            Notification::make()
+                ->warning()
+                ->title('Photo required')
+                ->body('Take a selfie with the camera or upload an image before submitting attendance.')
+                ->send();
+
+            return;
+        }
 
         if ($activeAttendance) {
             $notes = $activeAttendance->notes;
@@ -104,7 +119,7 @@ class Attendance extends Page implements HasForms
 
             $activeAttendance->update([
                 'check_out_at' => now(),
-                'check_out_image_path' => $data['image'],
+                'check_out_image_path' => $imagePath,
                 'status' => 'checked_out',
                 'notes' => $notes,
             ]);
@@ -126,7 +141,7 @@ class Attendance extends Page implements HasForms
                 'branch_id' => $user->branch_id,
                 'attendance_date' => today(),
                 'check_in_at' => now(),
-                'check_in_image_path' => $data['image'],
+                'check_in_image_path' => $imagePath,
                 'status' => 'checked_in',
                 'notes' => $data['notes'] ?? null,
             ]);
@@ -173,5 +188,47 @@ class Attendance extends Page implements HasForms
             ->whereNull('check_out_at')
             ->latest('check_in_at')
             ->first();
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function resolveImagePath(array $data): ?string
+    {
+        return $this->storeCapturedImage($data['image_data'] ?? null) ?? ($data['image'] ?? null);
+    }
+
+    private function storeCapturedImage(mixed $imageData): ?string
+    {
+        if (! is_string($imageData) || ! str_starts_with($imageData, 'data:image/')) {
+            return null;
+        }
+
+        [$metadata, $encodedImage] = array_pad(explode(',', $imageData, 2), 2, null);
+
+        if (blank($metadata) || blank($encodedImage)) {
+            return null;
+        }
+
+        preg_match('/^data:image\/(?P<extension>[a-zA-Z0-9.+-]+);base64$/', $metadata, $matches);
+
+        $binaryImage = base64_decode($encodedImage, true);
+
+        if ($binaryImage === false) {
+            return null;
+        }
+
+        $extension = match (strtolower($matches['extension'] ?? 'jpg')) {
+            'jpeg' => 'jpg',
+            'png' => 'png',
+            'webp' => 'webp',
+            default => 'jpg',
+        };
+
+        $path = 'attendance/' . Str::uuid() . '.' . $extension;
+
+        Storage::disk('public')->put($path, $binaryImage);
+
+        return $path;
     }
 }

@@ -8,9 +8,9 @@ import {
   Text,
   StyleSheet,
   Animated,
-  Image,
   Dimensions,
 } from 'react-native';
+import AlinMoveLogo from '../components/AlinMoveLogo';
 import Colors from '../theme/colors';
 
 const { width } = Dimensions.get('window');
@@ -58,11 +58,7 @@ export default function SplashScreen({ onFinish }: Props) {
           { opacity: logoOpacity, transform: [{ scale: logoScale }] },
         ]}
       >
-        <Image
-          source={require('../../assets/logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+        <AlinMoveLogo scale={1.5} />
       </Animated.View>
 
       <Animated.View style={[styles.taglineContainer, { opacity: taglineOpacity }]}>
@@ -83,7 +79,7 @@ export default function SplashScreen({ onFinish }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F5A524',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -93,7 +89,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     width: width * 0.55,
-    height: width * 0.55,
+    height: width * 0.25,
   },
   taglineContainer: {
     alignItems: 'center',
@@ -101,12 +97,12 @@ const styles = StyleSheet.create({
   tagline: {
     fontSize: 20,
     fontWeight: '700',
-    color: Colors.text,
+    color: '#111111',
     letterSpacing: 0.5,
   },
   subTagline: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: '#333333',
     marginTop: 6,
     letterSpacing: 1,
   },

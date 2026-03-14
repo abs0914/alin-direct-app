@@ -9,6 +9,15 @@ import axios, { AxiosInstance } from 'axios';
 import { supabase } from '../lib/supabase';
 import Config from '../config';
 import { User, Rider, DeliveryJob, EarningsSummary } from '../types';
+import { MOCK_EARNINGS, MOCK_RIDER, MOCK_USER } from '../data/mockData';
+import {
+  advanceJobStatus,
+  getActiveJob as getStoreActiveJob,
+  getJobHistory as getStoreJobHistory,
+  respondToOffer as storeRespondToOffer,
+} from '../store/jobStore';
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 class ApiService {
   private client: AxiosInstance;
@@ -43,6 +52,10 @@ class ApiService {
     vehicle_color?: string;
     maya_phone?: string;
   }): Promise<{ user: User; rider: Rider }> {
+    if (Config.DEMO_MODE) {
+      await delay(500);
+      return { user: MOCK_USER, rider: MOCK_RIDER };
+    }
     const res = await this.client.post('/rider/register', data);
     return res.data;
   }
@@ -50,6 +63,10 @@ class ApiService {
   // ── Profile ───────────────────────────────────────
 
   async getProfile(): Promise<{ user: User; rider: Rider }> {
+    if (Config.DEMO_MODE) {
+      await delay(300);
+      return { user: MOCK_USER, rider: MOCK_RIDER };
+    }
     const res = await this.client.get('/rider/profile');
     return res.data;
   }
@@ -62,6 +79,11 @@ class ApiService {
   // ── Availability ──────────────────────────────────
 
   async updateAvailability(availability: 'online' | 'offline'): Promise<{ availability: string }> {
+    if (Config.DEMO_MODE) {
+      await delay(300);
+      MOCK_RIDER.availability = availability;
+      return { availability };
+    }
     const res = await this.client.put('/rider/availability', { availability });
     return res.data;
   }
@@ -69,6 +91,10 @@ class ApiService {
   // ── Location ──────────────────────────────────────
 
   async updateLocation(lat: number, lng: number, heading?: number, speed?: number): Promise<{ success: boolean }> {
+    if (Config.DEMO_MODE) {
+      await delay(100);
+      return { success: true };
+    }
     const res = await this.client.put('/rider/location', { lat, lng, heading, speed });
     return res.data;
   }
@@ -76,21 +102,45 @@ class ApiService {
   // ── Jobs ──────────────────────────────────────────
 
   async getActiveJob(): Promise<DeliveryJob | null> {
+    if (Config.DEMO_MODE) {
+      await delay(300);
+      return getStoreActiveJob();
+    }
     const res = await this.client.get('/rider/jobs/active');
     return res.data.job ?? null;
   }
 
   async getJobHistory(page: number = 1): Promise<{ data: DeliveryJob[] }> {
+    if (Config.DEMO_MODE) {
+      await delay(400);
+      const allJobs = getStoreJobHistory();
+      const pageSize = 15;
+      const start = (page - 1) * pageSize;
+      return { data: allJobs.slice(start, start + pageSize) };
+    }
     const res = await this.client.get('/rider/jobs/history', { params: { page } });
     return res.data;
   }
 
   async respondToOffer(offerId: number, action: 'accept' | 'reject'): Promise<{ success: boolean; job: DeliveryJob | null; offer_id: number }> {
+    if (Config.DEMO_MODE) {
+      await delay(500);
+      const job = storeRespondToOffer(action);
+      return { success: true, job, offer_id: offerId };
+    }
     const res = await this.client.post(`/rider/offers/${offerId}/respond`, { action });
     return res.data;
   }
 
   async updateJobStatus(jobId: number, status: string, data?: Record<string, unknown>): Promise<{ success: boolean; job: DeliveryJob }> {
+    if (Config.DEMO_MODE) {
+      await delay(400);
+      const job = advanceJobStatus();
+      if (!job) {
+        throw new Error('No active job to update.');
+      }
+      return { success: true, job };
+    }
     const res = await this.client.put(`/rider/jobs/${jobId}/status`, { status, ...data });
     return res.data;
   }
@@ -107,6 +157,10 @@ class ApiService {
   // ── Earnings ──────────────────────────────────────
 
   async getEarnings(): Promise<EarningsSummary> {
+    if (Config.DEMO_MODE) {
+      await delay(400);
+      return { ...MOCK_EARNINGS };
+    }
     const res = await this.client.get('/rider/earnings');
     return res.data;
   }
@@ -114,6 +168,11 @@ class ApiService {
   // ── Payouts ───────────────────────────────────────
 
   async requestPayout(amount: number): Promise<{ success: boolean; message: string }> {
+    if (Config.DEMO_MODE) {
+      await delay(800);
+      MOCK_EARNINGS.pending_payout = Math.max(0, MOCK_EARNINGS.pending_payout - amount);
+      return { success: true, message: 'Payout request submitted.' };
+    }
     const res = await this.client.post('/rider/payouts', { amount });
     return res.data;
   }

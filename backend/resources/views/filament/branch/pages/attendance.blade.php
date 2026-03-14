@@ -28,6 +28,104 @@
 
             @if(! $todayAttendance || $activeAttendance)
                 <form wire:submit="submit" class="space-y-6">
+                    <div
+                        x-data="{
+                            preview: $wire.entangle('data.image_data'),
+                            stream: null,
+                            cameraOpen: false,
+                            error: null,
+                            async startCamera() {
+                                this.error = null
+
+                                if (! navigator.mediaDevices?.getUserMedia) {
+                                    this.error = 'Camera access is not supported in this browser. You can upload a photo below instead.'
+                                    return
+                                }
+
+                                try {
+                                    this.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+                                    this.$refs.video.srcObject = this.stream
+                                    this.cameraOpen = true
+                                } catch (error) {
+                                    this.error = 'Unable to access the camera. Please allow camera permission or upload a photo below.'
+                                }
+                            },
+                            stopCamera() {
+                                this.stream?.getTracks().forEach((track) => track.stop())
+                                this.stream = null
+                                this.cameraOpen = false
+                            },
+                            capture() {
+                                if (! this.$refs.video?.videoWidth) {
+                                    this.error = 'Camera is still loading. Please try again in a moment.'
+                                    return
+                                }
+
+                                const canvas = this.$refs.canvas
+                                canvas.width = this.$refs.video.videoWidth
+                                canvas.height = this.$refs.video.videoHeight
+                                canvas.getContext('2d').drawImage(this.$refs.video, 0, 0, canvas.width, canvas.height)
+                                this.preview = canvas.toDataURL('image/jpeg', 0.92)
+                                this.stopCamera()
+                            },
+                            clearPreview() {
+                                this.preview = null
+                            },
+                        }"
+                        x-on:beforeunload.window="stopCamera()"
+                        class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+                    >
+                        <div class="mb-4">
+                            <h3 class="text-lg font-semibold text-gray-900">{{ $activeAttendance ? 'Check-out Selfie Camera' : 'Check-in Selfie Camera' }}</h3>
+                            <p class="mt-1 text-sm text-gray-500">
+                                Use your device camera to take the required attendance selfie. This works on supported mobile browsers and on desktops with webcam permission.
+                            </p>
+                        </div>
+
+                        <div class="grid gap-4 lg:grid-cols-[minmax(0,20rem)_1fr]">
+                            <div class="space-y-3">
+                                <div class="aspect-[3/4] overflow-hidden rounded-xl border border-dashed border-gray-300 bg-gray-50">
+                                    <video x-ref="video" x-show="cameraOpen" autoplay playsinline muted class="h-full w-full object-cover"></video>
+                                    <img x-show="! cameraOpen && preview" x-bind:src="preview" alt="Attendance selfie preview" class="h-full w-full object-cover" />
+                                    <div x-show="! cameraOpen && ! preview" class="flex h-full items-center justify-center p-6 text-center text-sm text-gray-500">
+                                        Open the camera, then take your selfie here.
+                                    </div>
+                                </div>
+
+                                <canvas x-ref="canvas" class="hidden"></canvas>
+
+                                <div class="flex flex-wrap gap-2">
+                                    <x-filament::button type="button" color="gray" x-show="! cameraOpen" x-on:click="startCamera()">
+                                        Open Camera
+                                    </x-filament::button>
+                                    <x-filament::button type="button" x-show="cameraOpen" x-on:click="capture()">
+                                        Take Photo
+                                    </x-filament::button>
+                                    <x-filament::button type="button" color="gray" x-show="cameraOpen" x-on:click="stopCamera()">
+                                        Close Camera
+                                    </x-filament::button>
+                                    <x-filament::button type="button" color="danger" x-show="preview && ! cameraOpen" x-on:click="clearPreview()">
+                                        Retake
+                                    </x-filament::button>
+                                </div>
+                            </div>
+
+                            <div class="space-y-3 text-sm text-gray-600">
+                                <div class="rounded-lg bg-blue-50 p-4 text-blue-700">
+                                    Recommended: use the camera here for attendance. If camera access is blocked, you can still upload an existing photo below.
+                                </div>
+
+                                <div x-show="error" x-text="error" class="rounded-lg bg-red-50 p-4 text-red-700"></div>
+
+                                <ul class="list-disc space-y-1 pl-5">
+                                    <li>Allow camera permission when your browser asks.</li>
+                                    <li>Use the front camera for selfie attendance when available.</li>
+                                    <li>After taking the photo, submit the form to save your check-in or check-out.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
                     {{ $this->form }}
 
                     <div class="flex justify-end">

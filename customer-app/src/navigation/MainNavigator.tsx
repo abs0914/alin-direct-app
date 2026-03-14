@@ -5,12 +5,14 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import AlinMoveLogo from '../components/AlinMoveLogo';
 import { Ionicons } from '@expo/vector-icons';
 import HomeScreen from '../screens/main/HomeScreen';
 import NewDeliveryScreen from '../screens/main/NewDeliveryScreen';
 import HistoryScreen from '../screens/main/HistoryScreen';
 import TrackingScreen from '../screens/main/TrackingScreen';
+import TrackLookupScreen from '../screens/main/TrackLookupScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
 import SettingsScreen from '../screens/main/SettingsScreen';
 import NotificationsScreen from '../screens/main/NotificationsScreen';
@@ -21,6 +23,7 @@ export type HomeStackParamList = {
   HomeMain: undefined;
   NewDelivery: { deliveryType?: string };
   Tracking: { jobId: number };
+  TrackLookup: undefined;
 };
 
 export type ProfileStackParamList = {
@@ -64,11 +67,9 @@ function HomeStackNavigator() {
           ),
           headerTitle: () => null,
           headerRight: () => (
-            <Image
-              source={require('../../assets/logo.png')}
-              style={{ width: 48, height: 48, marginRight: 16 }}
-              resizeMode="contain"
-            />
+            <View style={{ marginRight: 12 }}>
+              <AlinMoveLogo scale={0.52} />
+            </View>
           ),
         }}
       />
@@ -81,6 +82,11 @@ function HomeStackNavigator() {
         name="Tracking"
         component={TrackingScreen}
         options={{ headerTitle: 'Track Delivery' }}
+      />
+      <HomeStack.Screen
+        name="TrackLookup"
+        component={TrackLookupScreen}
+        options={{ headerTitle: 'Track Shipment' }}
       />
     </HomeStack.Navigator>
   );

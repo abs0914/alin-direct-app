@@ -5,7 +5,8 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Image, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import AlinMoveLogo from '../components/AlinMoveLogo';
 import { Ionicons } from '@expo/vector-icons';
 import HomeScreen from '../screens/main/HomeScreen';
 import ActiveJobScreen from '../screens/main/ActiveJobScreen';
@@ -72,11 +73,9 @@ function HomeStackNavigator() {
           ),
           headerTitle: () => null,
           headerRight: () => (
-            <Image
-              source={require('../../assets/logo.png')}
-              style={{ width: 48, height: 48, marginRight: 16 }}
-              resizeMode="contain"
-            />
+            <View style={{ marginRight: 12 }}>
+              <AlinMoveLogo scale={0.52} />
+            </View>
           ),
         }}
       />

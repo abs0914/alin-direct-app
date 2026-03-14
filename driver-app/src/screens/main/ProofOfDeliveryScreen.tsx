@@ -19,6 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../services/api';
 import { setActiveJob } from '../../store/jobStore';
+import Config from '../../config';
 import Colors from '../../theme/colors';
 
 type Props = {
@@ -35,6 +36,11 @@ export default function ProofOfDeliveryScreen({ navigation, route }: Props) {
   const [submitting, setSubmitting] = useState(false);
 
   const handleTakePhoto = async () => {
+    if (Config.DEMO_MODE) {
+      // Simulate photo capture without camera access
+      setPhotoUri('demo://mock-delivery-photo.jpg');
+      return;
+    }
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
@@ -57,32 +63,32 @@ export default function ProofOfDeliveryScreen({ navigation, route }: Props) {
     );
   };
 
-  const canSubmit = recipientName.trim().length > 0 && !!photoUri;
+  const canSubmit = Config.DEMO_MODE
+    ? recipientName.trim().length > 0
+    : recipientName.trim().length > 0 && !!photoUri;
 
   const handleSubmit = async () => {
-    if (!canSubmit || !photoUri) return;
+    if (!canSubmit) return;
     setSubmitting(true);
     try {
+      if (Config.DEMO_MODE) {
+        // Simulate upload delay then mark job delivered
+        await new Promise(r => setTimeout(r, 1500));
+        setActiveJob(null);
+        Alert.alert('Delivery Confirmed', 'Proof of delivery submitted successfully.', [
+          { text: 'OK', onPress: () => navigation.goBack() },
+        ]);
+        return;
+      }
+
+      if (!photoUri) return;
       const formData = new FormData();
       formData.append('recipient_name', recipientName);
       formData.append('notes', notes);
       const fileName = photoUri.split('/').pop() ?? 'photo.jpg';
-      formData.append('photo', {
-        uri: photoUri,
-        name: fileName,
-        type: 'image/jpeg',
-      } as unknown as Blob);
-
+      formData.append('photo', { uri: photoUri, name: fileName, type: 'image/jpeg' } as unknown as Blob);
       await api.submitPod(jobId, formData);
-
-      // Mark job as delivered
-      try {
-        const result = await api.updateJobStatus(jobId, 'delivered');
-        setActiveJob(null);
-      } catch {
-        // POD submitted even if status update fails
-      }
-
+      try { await api.updateJobStatus(jobId, 'delivered'); setActiveJob(null); } catch { /* ignore */ }
       Alert.alert('Delivery Confirmed', 'Proof of delivery submitted successfully.', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);

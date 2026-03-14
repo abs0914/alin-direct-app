@@ -112,9 +112,7 @@ export default function HomeScreen({ navigation }: Props) {
 
   const handleContinue = () => {
     if (selectedService === 'track_shipment') {
-      // Navigate to the History tab for tracking
-      const parent = navigation.getParent();
-      if (parent) parent.navigate('History');
+      navigation.navigate('TrackLookup');
     } else {
       // Navigate to booking with delivery type pre-selected
       navigation.navigate('NewDelivery', { deliveryType: selectedService });

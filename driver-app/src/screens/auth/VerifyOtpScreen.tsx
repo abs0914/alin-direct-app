@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { useAuth } from '../../contexts/AuthContext';
+import { OTP_TEST_MODE, useAuth } from '../../contexts/AuthContext';
 import Colors from '../../theme/colors';
 import Config from '../../config';
 
@@ -90,6 +90,9 @@ export default function VerifyOtpScreen({ navigation, route }: Props) {
           Enter the {Config.OTP_LENGTH}-digit code sent to{'\n'}
           <Text style={styles.phone}>{phone}</Text>
         </Text>
+        {OTP_TEST_MODE ? (
+          <Text style={styles.helperText}>Test mode: enter any {Config.OTP_LENGTH}-digit OTP.</Text>
+        ) : null}
 
         <TextInput
           ref={inputRef}
@@ -140,6 +143,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: '700', color: Colors.text, textAlign: 'center' },
   subtitle: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', marginTop: 8, marginBottom: 32, lineHeight: 22 },
   phone: { fontWeight: '600', color: Colors.text },
+  helperText: { fontSize: 12, color: Colors.textSecondary, textAlign: 'center', marginTop: -16, marginBottom: 16 },
   otpInput: {
     backgroundColor: Colors.surface,
     borderWidth: 1,

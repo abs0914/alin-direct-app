@@ -1,18 +1,34 @@
 // ============================================================
 // ALiN Move Driver App - Authentication Context
 // ============================================================
-// DEMO_MODE: true  → bypasses Supabase, uses mock data
+// DEMO_MODE: true  → bypasses Supabase SMS and accepts any 6-digit OTP locally
 // DEMO_MODE: false → real Supabase Phone OTP auth
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import api from '../services/api';
+import Config from '../config';
 import { User, Rider } from '../types';
 import { Session } from '@supabase/supabase-js';
 import { MOCK_USER, MOCK_RIDER } from '../data/mockData';
 
 // ---- DEMO FLAG ----
-const DEMO_MODE = true; // Set to false when Supabase is running
+export const OTP_TEST_MODE = Config.DEMO_MODE; // Set to false when Supabase is running
+
+const createDemoUser = (phone: string): User => ({
+  ...MOCK_USER,
+  phone,
+});
+
+const createDemoRider = (phone: string): Rider => {
+  const user = createDemoUser(phone);
+
+  MOCK_RIDER.availability = 'offline';
+  MOCK_RIDER.maya_phone = phone;
+  MOCK_RIDER.user = user;
+
+  return MOCK_RIDER;
+};
 
 interface AuthState {
   user: User | null;
@@ -65,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Bootstrap
   useEffect(() => {
-    if (DEMO_MODE) {
+    if (OTP_TEST_MODE) {
       setState(prev => ({ ...prev, isLoading: false }));
       return;
     }
@@ -96,17 +112,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadProfile]);
 
   const requestOtp = useCallback(async (_phone: string) => {
-    if (DEMO_MODE) return; // skip — no real SMS
+    if (OTP_TEST_MODE) return; // skip — no real SMS in local test mode
     const { error } = await supabase.auth.signInWithOtp({ phone: _phone });
     if (error) throw error;
   }, []);
 
   const verifyOtp = useCallback(async (_phone: string, _otp: string) => {
-    if (DEMO_MODE) {
-      // Accept any OTP, log in with mock data
+    if (OTP_TEST_MODE) {
+      const user = createDemoUser(_phone);
+
       setState({
-        user: MOCK_USER,
-        rider: { ...MOCK_RIDER },
+        user,
+        rider: createDemoRider(_phone),
         session: { demo: true },
         isLoading: false,
         isAuthenticated: true,
@@ -123,10 +140,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(
     async (_regData: { name: string; vehicle_type: string; plate_number?: string }) => {
-      if (DEMO_MODE) {
+      if (OTP_TEST_MODE) {
         setState({
-          user: MOCK_USER,
-          rider: { ...MOCK_RIDER },
+          user: createDemoUser(MOCK_USER.phone),
+          rider: createDemoRider(MOCK_USER.phone),
           session: { demo: true },
           isLoading: false,
           isAuthenticated: true,
@@ -140,9 +157,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    if (!DEMO_MODE) {
+    if (!OTP_TEST_MODE) {
       await supabase.auth.signOut();
     }
+    MOCK_RIDER.availability = 'offline';
     setState({
       user: null,
       rider: null,
@@ -153,7 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshProfile = useCallback(async () => {
-    if (DEMO_MODE) return;
+    if (OTP_TEST_MODE) return;
     try {
       const profileData = await api.getProfile();
       setState(prev => ({ ...prev, user: profileData.user, rider: profileData.rider }));
