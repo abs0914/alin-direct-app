@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Vibration,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -27,8 +28,17 @@ import {
   getNextStatusLabel,
   getNextStatus,
 } from '../../store/jobStore';
+import {
+  addMyAlertListener,
+  removeMyAlertListener,
+  setMyActiveAlert,
+  getMyActiveAlert,
+  notifyAlertResolved,
+} from '../../store/emergencyStore';
+import { broadcastEmergencyLocation } from '../../services/firebase';
+import { useAuth } from '../../contexts/AuthContext';
 import Colors from '../../theme/colors';
-import { DeliveryJob } from '../../types';
+import { DeliveryJob, EmergencyAlert } from '../../types';
 import LiveMap from '../../components/LiveMap';
 
 type Props = {
@@ -68,8 +78,13 @@ const STATUS_STEPS = [
 ];
 
 export default function ActiveJobScreen({ navigation, route }: Props) {
+  const { rider } = useAuth();
   const [job, setJob] = useState<DeliveryJob | null>(getActiveJob());
   const [isAdvancing, setIsAdvancing] = useState(false);
+
+  // ── Emergency state ────────────────────────────────────────
+  const [myAlert, setMyAlertState] = useState<EmergencyAlert | null>(getMyActiveAlert());
+  const [isTriggeringSOS, setIsTriggeringSOS] = useState(false);
 
   useEffect(() => {
     const listener = (updatedJob: DeliveryJob | null) => {
@@ -83,6 +98,80 @@ export default function ActiveJobScreen({ navigation, route }: Props) {
     addJobListener(listener);
     return () => removeJobListener(listener);
   }, []);
+
+  // Subscribe to own emergency alert changes
+  useEffect(() => {
+    const listener = (alert: EmergencyAlert | null) => setMyAlertState(alert);
+    addMyAlertListener(listener);
+    return () => removeMyAlertListener(listener);
+  }, []);
+
+  // ── SOS Handlers ──────────────────────────────────────────
+
+  const handleSOSTrigger = async () => {
+    if (!rider || rider.status !== 'approved') return;
+
+    Alert.alert(
+      '🆘 Trigger Emergency SOS?',
+      'This will alert your branch office and broadcast an emergency assistance job to nearby riders.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'SEND SOS',
+          style: 'destructive',
+          onPress: async () => {
+            setIsTriggeringSOS(true);
+            try {
+              const res = await api.triggerEmergency(0, 0, 'SOS triggered during active delivery.');
+              setMyActiveAlert(res.alert);
+              Vibration.vibrate([0, 300, 100, 300, 100, 300]);
+
+              // Broadcast to nearby riders via Supabase realtime channel
+              // so they receive the SOS without waiting for a poll.
+              if (rider?.branch_id) {
+                broadcastEmergencyLocation(
+                  rider.branch_id,
+                  res.alert.id,
+                  rider.id,
+                  { latitude: 0, longitude: 0, heading: 0, speed: 0, timestamp: Date.now() }
+                );
+              }
+            } catch {
+              Alert.alert('Error', 'Could not send SOS. Please try again.');
+            } finally {
+              setIsTriggeringSOS(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleSOSCancel = async () => {
+    if (!myAlert) return;
+    Alert.alert(
+      'Cancel Emergency?',
+      'Mark this as a false alarm and cancel the emergency alert.',
+      [
+        { text: 'No' },
+        {
+          text: 'Yes, Cancel',
+          onPress: async () => {
+            try {
+              await api.cancelEmergency(myAlert.id);
+              if (rider?.branch_id) {
+                notifyAlertResolved(rider.branch_id, myAlert.id, 'cancelled');
+              } else {
+                setMyActiveAlert(null);
+              }
+            } catch {
+              Alert.alert('Error', 'Could not cancel the emergency.');
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const handleAdvanceStatus = async () => {
     if (!job) return;
@@ -245,6 +334,41 @@ export default function ActiveJobScreen({ navigation, route }: Props) {
           )}
         </TouchableOpacity>
       )}
+
+      {/* ── SOS Emergency Section ──────────────────────────── */}
+      {rider?.status === 'approved' && (
+        <View style={styles.sosSection}>
+          {myAlert ? (
+            <View style={styles.sosActiveCard}>
+              <View style={styles.sosActiveHeader}>
+                <Text style={styles.sosActiveIcon}>🆘</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sosActiveTitle}>SOS Active</Text>
+                  <Text style={styles.sosActiveStatus}>
+                    {myAlert.status === 'responding' ? '✅ A rider is on the way!' : '⏳ Waiting for a responder...'}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity style={styles.sosCancelBtn} onPress={handleSOSCancel}>
+                <Text style={styles.sosCancelText}>Cancel (False Alarm)</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[styles.sosBtn, isTriggeringSOS && styles.sosBtnDisabled]}
+              onPress={handleSOSTrigger}
+              disabled={isTriggeringSOS}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.sosBtnIcon}>🆘</Text>
+              <View>
+                <Text style={styles.sosBtnText}>EMERGENCY SOS</Text>
+                <Text style={styles.sosBtnSubtext}>Tap to alert branch & nearby riders</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -296,4 +420,42 @@ const styles = StyleSheet.create({
   actionBtn: { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 18, alignItems: 'center' },
   actionBtnDisabled: { opacity: 0.6 },
   actionBtnText: { color: Colors.textOnPrimary, fontSize: 17, fontWeight: '700' },
+  // SOS
+  sosSection: { marginTop: 16 },
+  sosBtn: {
+    backgroundColor: Colors.danger,
+    borderRadius: 16,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    elevation: 4,
+    shadowColor: Colors.danger,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+  },
+  sosBtnDisabled: { opacity: 0.6 },
+  sosBtnIcon: { fontSize: 36 },
+  sosBtnText: { fontSize: 18, fontWeight: '800', color: '#fff', letterSpacing: 1 },
+  sosBtnSubtext: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
+  sosActiveCard: {
+    backgroundColor: Colors.dangerBg,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: Colors.danger,
+  },
+  sosActiveHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  sosActiveIcon: { fontSize: 32 },
+  sosActiveTitle: { fontSize: 16, fontWeight: '800', color: Colors.danger },
+  sosActiveStatus: { fontSize: 13, color: Colors.text, marginTop: 2 },
+  sosCancelBtn: {
+    borderWidth: 1,
+    borderColor: Colors.danger,
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  sosCancelText: { color: Colors.danger, fontSize: 14, fontWeight: '600' },
 });

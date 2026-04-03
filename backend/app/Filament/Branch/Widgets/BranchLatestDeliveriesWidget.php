@@ -12,7 +12,7 @@ class BranchLatestDeliveriesWidget extends BaseWidget
 {
     protected static ?string $heading = 'Latest Deliveries';
 
-    protected static ?int $sort = 2;
+    protected static ?int $sort = 3;
 
     protected int | string | array $columnSpan = 'full';
 

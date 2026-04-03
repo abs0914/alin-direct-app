@@ -4,8 +4,22 @@
 
 import { Platform } from 'react-native';
 
-// Android emulator uses 10.0.2.2 to reach host machine; web/iOS use localhost
-const DEV_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+// ── Dev host resolution ────────────────────────────────────────
+// • Physical device (Android/iOS) on the same WiFi → use your machine's LAN IP.
+// • Android emulator (AVD)                         → 10.0.2.2
+// • iOS simulator / Expo Web                       → localhost
+//
+// ⚠️  When your network changes (e.g. different WiFi), update DEV_LAN_IP below.
+const DEV_LAN_IP = '192.168.0.141';
+
+const DEV_HOST = (() => {
+  if (!__DEV__) return '';
+  // Expo Go on a physical device needs the real LAN IP.
+  // AVD emulator uses the special alias 10.0.2.2.
+  // Expo Web (browser on the same machine) can use localhost.
+  if (Platform.OS === 'web') return 'localhost';
+  return DEV_LAN_IP; // works for both physical Android and physical iOS
+})();
 
 const Config = {
   // Demo / local testing mode
@@ -15,7 +29,7 @@ const Config = {
   API_BASE_URL: __DEV__ ? `http://${DEV_HOST}:8000/api` : 'https://api.alinmove.com/api',
 
   // Supabase Configuration
-  SUPABASE_URL: __DEV__ ? `http://${DEV_HOST}:54321` : 'https://YOUR_PROJECT_REF.supabase.co',
+  SUPABASE_URL: __DEV__ ? `http://${DEV_HOST}:6321` : 'https://YOUR_PROJECT_REF.supabase.co',
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0',
 
   // OTP Configuration

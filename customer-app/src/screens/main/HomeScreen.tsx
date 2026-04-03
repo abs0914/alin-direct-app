@@ -12,6 +12,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  TextInput,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -49,13 +50,6 @@ const SERVICES: ServiceOption[] = [
     title: 'Door-to-Door Delivery',
     description: 'Pickup and deliver directly to recipient.',
   },
-  {
-    key: 'track_shipment',
-    iconName: 'cube-outline',
-    iconFamily: 'material',
-    title: 'Track Existing Shipment',
-    description: 'Check status of a parcel.',
-  },
 ];
 
 const STATUS_ICONS: Record<string, { name: string; family: 'ionicons' | 'material' }> = {
@@ -85,6 +79,7 @@ const STATUS_LABELS: Record<string, string> = {
 export default function HomeScreen({ navigation }: Props) {
   const [selectedService, setSelectedService] = useState<string>('pickup_to_branch');
   const [activeJob, setActiveJobLocal] = useState<DeliveryJob | null>(null);
+  const [trackingInput, setTrackingInput] = useState('');
 
   // Fetch active booking from API on focus
   useFocusEffect(
@@ -111,17 +106,17 @@ export default function HomeScreen({ navigation }: Props) {
   }, []);
 
   const handleContinue = () => {
-    if (selectedService === 'track_shipment') {
-      navigation.navigate('TrackLookup');
-    } else {
-      // Navigate to booking with delivery type pre-selected
-      navigation.navigate('NewDelivery', { deliveryType: selectedService });
-    }
+    navigation.navigate('NewDelivery', { deliveryType: selectedService });
+  };
+
+  const handleTrack = () => {
+    navigation.navigate('TrackLookup', trackingInput.trim() ? { initialQuery: trackingInput.trim() } : undefined);
   };
 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+
         {/* Active Job Banner */}
         {activeJob && (
           <TouchableOpacity
@@ -150,10 +145,33 @@ export default function HomeScreen({ navigation }: Props) {
           </TouchableOpacity>
         )}
 
-        {/* Title */}
-        <Text style={styles.title}>Choose Delivery Service</Text>
+        {/* ── Track a Shipment ── */}
+        <Text style={styles.sectionLabel}>Track a Shipment</Text>
+        <View style={styles.trackCard}>
+          <View style={styles.trackInputRow}>
+            <TextInput
+              style={styles.trackInput}
+              placeholder="e.g. ALN-2025-001"
+              placeholderTextColor={Colors.textLight}
+              value={trackingInput}
+              onChangeText={setTrackingInput}
+              returnKeyType="search"
+              onSubmitEditing={handleTrack}
+              autoCapitalize="characters"
+            />
+            <TouchableOpacity style={styles.trackBtn} onPress={handleTrack} activeOpacity={0.8}>
+              <Ionicons name="search" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity onPress={handleTrack} activeOpacity={0.7} style={styles.trackLinkRow}>
+            <Ionicons name="scan-outline" size={14} color={Colors.primary} />
+            <Text style={styles.trackLinkText}>Scan barcode or browse history</Text>
+            <Ionicons name="chevron-forward" size={13} color={Colors.primary} />
+          </TouchableOpacity>
+        </View>
 
-        {/* Service Cards */}
+        {/* ── Book a Delivery ── */}
+        <Text style={[styles.sectionLabel, { marginTop: 24 }]}>Book a Delivery</Text>
         {SERVICES.map((service) => {
           const isSelected = selectedService === service.key;
           return (
@@ -176,9 +194,13 @@ export default function HomeScreen({ navigation }: Props) {
                 </Text>
                 <Text style={styles.serviceDesc}>{service.description}</Text>
               </View>
+              {isSelected && (
+                <Ionicons name="checkmark-circle" size={22} color={Colors.primary} style={{ marginLeft: 8 }} />
+              )}
             </TouchableOpacity>
           );
         })}
+
       </ScrollView>
 
       {/* Continue Button - pinned to bottom */}
@@ -208,8 +230,37 @@ const styles = StyleSheet.create({
   activeStatus: { fontSize: 15, fontWeight: '600', color: Colors.text },
   activeAddress: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
 
-  // Title
-  title: { fontSize: 22, fontWeight: '700', color: Colors.text, marginBottom: 20, textAlign: 'center' },
+  // Section label
+  sectionLabel: {
+    fontSize: 11, fontWeight: '700', color: Colors.textLight,
+    textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10,
+  },
+
+  // Track card
+  trackCard: {
+    backgroundColor: Colors.surface, borderRadius: 16,
+    borderWidth: 1, borderColor: Colors.border,
+    padding: 14, marginBottom: 4,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06, shadowRadius: 4, elevation: 1,
+  },
+  trackInputRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  trackInput: {
+    flex: 1, height: 46, backgroundColor: Colors.background,
+    borderRadius: 12, borderWidth: 1, borderColor: Colors.border,
+    paddingHorizontal: 14, fontSize: 14, color: Colors.text,
+  },
+  trackBtn: {
+    width: 46, height: 46, borderRadius: 12,
+    backgroundColor: Colors.primary,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  trackLinkRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    marginTop: 10, paddingTop: 10,
+    borderTopWidth: 1, borderTopColor: Colors.borderLight,
+  },
+  trackLinkText: { flex: 1, fontSize: 13, color: Colors.primary, fontWeight: '500' },
 
   // Service cards
   serviceCard: {

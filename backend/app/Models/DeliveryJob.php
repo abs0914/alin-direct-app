@@ -13,12 +13,12 @@ class DeliveryJob extends Model
 
     protected $fillable = [
         'tracking_uuid', 'sender_id', 'rider_id', 'branch_id', 'created_by',
-        'status', 'vehicle_type',
+        'status', 'is_emergency', 'vehicle_type',
         'pickup_contact_name', 'pickup_contact_phone', 'pickup_address',
         'pickup_lat', 'pickup_lng', 'pickup_notes',
         'dropoff_contact_name', 'dropoff_contact_phone', 'dropoff_address',
         'dropoff_lat', 'dropoff_lng', 'dropoff_notes',
-        'package_description', 'package_size', 'package_weight_kg',
+        'package_description', 'package_size', 'box_type', 'package_weight_kg',
         'distance_km', 'base_fare', 'distance_fare', 'surge_multiplier',
         'total_price', 'rider_earnings', 'platform_commission',
         'payment_method', 'payment_status', 'cod_collected', 'cod_settled',
@@ -30,6 +30,7 @@ class DeliveryJob extends Model
     protected function casts(): array
     {
         return [
+            'is_emergency' => 'boolean',
             'pickup_lat' => 'decimal:7',
             'pickup_lng' => 'decimal:7',
             'dropoff_lat' => 'decimal:7',

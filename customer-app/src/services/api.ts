@@ -7,7 +7,10 @@
 import axios, { AxiosInstance } from 'axios';
 import { supabase } from '../lib/supabase';
 import Config from '../config';
-import { User, Customer, DeliveryJob, PriceEstimate } from '../types';
+import {
+  User, Customer, DeliveryJob, PriceEstimate, ServiceType,
+  SupportConversation, SupportMessage, SendMessageResponse,
+} from '../types';
 import { MOCK_USER, MOCK_CUSTOMER, MOCK_JOB_HISTORY, calculatePriceEstimate } from '../data/mockData';
 import {
   createDemoJob,
@@ -16,6 +19,12 @@ import {
   getDemoJobHistory,
   cancelDemoJob,
 } from '../store/jobStore';
+import {
+  getDemoConversations,
+  getDemoConversation,
+  sendDemoMessage,
+  closeDemoConversation,
+} from '../store/supportStore';
 
 class ApiService {
   private client: AxiosInstance;
@@ -77,12 +86,14 @@ class ApiService {
     dropoff_lng: number;
     vehicle_type: string;
     package_size?: string;
+    box_type?: 'own_box' | 'alin_box';
+    service_type?: ServiceType;
   }): Promise<PriceEstimate> {
     if (Config.DEMO_MODE) {
       return calculatePriceEstimate(
-        data.vehicle_type,
-        data.pickup_lat, data.pickup_lng,
-        data.dropoff_lat, data.dropoff_lng,
+        data.package_size ?? 'pouch_small',
+        data.box_type ?? 'own_box',
+        data.service_type ?? 'intra',
       );
     }
     const res = await this.client.post('/customer/estimate', data);
@@ -135,6 +146,45 @@ class ApiService {
     if (Config.DEMO_MODE) return { lat: null, lng: null, last_seen_at: null };
     const res = await this.client.get(`/customer/bookings/${jobId}/driver-location`);
     return res.data;
+  }
+
+  // ── Support / Chat ────────────────────────────────
+
+  async startSupportChat(message: string, deliveryJobId?: number): Promise<SendMessageResponse> {
+    if (Config.DEMO_MODE) return sendDemoMessage(null, message);
+    const res = await this.client.post('/customer/support/start', {
+      message,
+      delivery_job_id: deliveryJobId ?? null,
+    });
+    return res.data;
+  }
+
+  async sendSupportMessage(conversationId: number, message: string): Promise<SendMessageResponse> {
+    if (Config.DEMO_MODE) return sendDemoMessage(conversationId, message);
+    const res = await this.client.post(`/customer/support/conversations/${conversationId}/message`, { message });
+    return res.data;
+  }
+
+  async getSupportConversations(): Promise<SupportConversation[]> {
+    if (Config.DEMO_MODE) return getDemoConversations();
+    const res = await this.client.get('/customer/support/conversations');
+    return res.data;
+  }
+
+  async getSupportConversation(conversationId: number): Promise<SupportConversation> {
+    if (Config.DEMO_MODE) return getDemoConversation(conversationId);
+    const res = await this.client.get(`/customer/support/conversations/${conversationId}`);
+    return res.data;
+  }
+
+  async closeSupportConversation(conversationId: number): Promise<void> {
+    if (Config.DEMO_MODE) { closeDemoConversation(conversationId); return; }
+    await this.client.post(`/customer/support/conversations/${conversationId}/close`);
+  }
+
+  async registerPushToken(expoPushToken: string): Promise<void> {
+    if (Config.DEMO_MODE) return;
+    await this.client.put('/me/push-token', { expo_push_token: expoPushToken });
   }
 }
 

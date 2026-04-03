@@ -145,6 +145,17 @@ class DeliveryJobResource extends Resource
                                 'extra_large' => 'Extra Large',
                             ])
                             ->required(),
+                        Forms\Components\Select::make('box_type')
+                            ->label('Box Type')
+                            ->options([
+                                'own_box'  => '🗃️ Own Box (customer-provided)',
+                                'alin_box' => '📦 ALiN Box (+₱50 fee)',
+                            ])
+                            ->default('own_box')
+                            ->required()
+                            ->helperText(fn (Forms\Get $get) => $get('box_type') === 'alin_box'
+                                ? 'ALiN provides the packaging box. ₱50 box fee is included in the total.'
+                                : 'Customer provides their own packaging.'),
                         Forms\Components\TextInput::make('package_weight_kg')
                             ->label('Weight (kg)')
                             ->numeric()
@@ -194,6 +205,16 @@ class DeliveryJobResource extends Resource
                     ->searchable(),
                 Tables\Columns\TextColumn::make('vehicle_type')
                     ->badge(),
+                Tables\Columns\TextColumn::make('box_type')
+                    ->label('Box')
+                    ->badge()
+                    ->formatStateUsing(fn (string $state) => match ($state) {
+                        'own_box'  => 'Own Box',
+                        'alin_box' => 'ALiN Box',
+                        default    => $state,
+                    })
+                    ->color(fn (string $state) => $state === 'alin_box' ? 'warning' : 'gray')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('total_price')
                     ->label('Total')
                     ->money('PHP')
@@ -314,6 +335,15 @@ class DeliveryJobResource extends Resource
                     ->schema([
                         Infolists\Components\TextEntry::make('package_description'),
                         Infolists\Components\TextEntry::make('package_size')->badge(),
+                        Infolists\Components\TextEntry::make('box_type')
+                            ->label('Box Type')
+                            ->badge()
+                            ->formatStateUsing(fn (string $state) => match ($state) {
+                                'own_box'  => '🗃️ Own Box',
+                                'alin_box' => '📦 ALiN Box',
+                                default    => $state,
+                            })
+                            ->color(fn (string $state) => $state === 'alin_box' ? 'warning' : 'gray'),
                         Infolists\Components\TextEntry::make('package_weight_kg')->suffix(' kg'),
                         Infolists\Components\TextEntry::make('total_price')->money('PHP')->weight('bold'),
                         Infolists\Components\TextEntry::make('payment_method')

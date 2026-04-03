@@ -4,7 +4,7 @@
 // DEMO: Simulates shipment lookup by tracking ID or barcode.
 // PRODUCTION: Replace lookupTracking with real API call.
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,13 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { RouteProp } from '@react-navigation/native';
+import { HomeStackParamList } from '../../navigation/MainNavigator';
 import Colors from '../../theme/colors';
+
+type Props = {
+  route: RouteProp<HomeStackParamList, 'TrackLookup'>;
+};
 
 // --- Demo shipment records ---
 const DEMO_SHIPMENTS: Record<string, DemoShipment> = {
@@ -66,11 +72,19 @@ const STATUS_COLOR: Record<string, string> = {
   in_transit: '#2563EB', delivered: '#16A34A', pending: '#D97706',
 };
 
-export default function TrackLookupScreen() {
-  const [query, setQuery] = useState('');
+export default function TrackLookupScreen({ route }: Props) {
+  const [query, setQuery] = useState(route?.params?.initialQuery ?? '');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<DemoShipment | null>(null);
   const [notFound, setNotFound] = useState(false);
+
+  // Auto-search if arriving with a pre-filled query
+  useEffect(() => {
+    if (route?.params?.initialQuery) {
+      handleTrack();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleTrack = async () => {
     const id = query.trim().toUpperCase();

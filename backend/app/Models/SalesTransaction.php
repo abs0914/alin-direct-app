@@ -20,6 +20,9 @@ class SalesTransaction extends Model
         'created_by',
         'daily_closing_id',
         'notes',
+        'box_type',
+        'package_size',
+        'service_type',
     ];
 
     protected function casts(): array

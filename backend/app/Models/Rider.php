@@ -75,6 +75,11 @@ class Rider extends Model
         return $this->hasMany(PayoutRequest::class);
     }
 
+    public function emergencyAlerts()
+    {
+        return $this->hasMany(EmergencyAlert::class);
+    }
+
     public function kycVerifiedBy()
     {
         return $this->belongsTo(User::class, 'kyc_verified_by');

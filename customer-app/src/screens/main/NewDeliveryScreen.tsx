@@ -4,7 +4,7 @@
 // Two-step booking: Step 1 = addresses + package, Step 2 = price + payment.
 // Uses real API pricing from the Laravel backend.
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -14,58 +14,46 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 
-// react-native-maps only works on native platforms; lazy-load to avoid web crash
-let MapView: any = null;
-let Marker: any = null;
-if (Platform.OS !== 'web') {
-  const maps = require('react-native-maps');
-  MapView = maps.default;
-  Marker = maps.Marker;
-}
 import { HomeStackParamList } from '../../navigation/MainNavigator';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import Colors from '../../theme/colors';
-import { PriceEstimate } from '../../types';
+import { PriceEstimate, ServiceType } from '../../types';
+import { RATE_CARD } from '../../data/mockData';
+import LiveMap from '../../components/LiveMap';
 
 type Props = {
   navigation: NativeStackNavigationProp<HomeStackParamList, 'NewDelivery'>;
 };
 
-// ---- Flat-fee pricing per item type ----
-const PACKAGE_PRICES: Record<string, number> = {
-  'box_5kg': 285,
-  'box_3kg': 180,
-  'box_1kg': 120,
-  'box_small': 60,
-  'pouch_large': 160,
-  'pouch_medium': 145,
-  'pouch_small': 115,
-  'pouch_xsmall': 75,
-  'pouch_envelope': 50,
-};
-
 type PackageCategory = 'pouch' | 'box';
+type BoxType = 'own_box' | 'alin_box';
+
+// Lookup flat rate from the rate card (fallback 0)
+function getRateCardPrice(sizeKey: string, boxType: BoxType, serviceType: ServiceType): number {
+  return RATE_CARD[sizeKey]?.[boxType]?.[serviceType] ?? 0;
+}
 
 const POUCH_PRESETS = [
-  { key: 'pouch_envelope', label: 'Envelope' },
-  { key: 'pouch_xsmall', label: 'XS' },
-  { key: 'pouch_small', label: 'S' },
-  { key: 'pouch_medium', label: 'M' },
-  { key: 'pouch_large', label: 'L' },
+  { key: 'pouch_xsmall', label: 'XSmall\n(1kg)' },
+  { key: 'pouch_small',  label: 'Small\n(2kg)' },
+  { key: 'pouch_medium', label: 'Medium\n(3kg)' },
+  { key: 'pouch_large',  label: 'Large\n(5kg)' },
 ];
 
 const BOX_PRESETS = [
-  { key: 'box_small', label: 'Small' },
-  { key: 'box_1kg', label: '1kg' },
-  { key: 'box_3kg', label: '3kg' },
-  { key: 'box_5kg', label: '5kg' },
+  { key: 'box_1kg',    label: '1kg Box' },
+  { key: 'box_3kg',    label: '3kg Box' },
+  { key: 'box_5kg',    label: '5kg Box' },
+  { key: 'box_small',  label: 'Small\n(10kg)' },
+  { key: 'box_medium', label: 'Medium\n(20kg)' },
+  { key: 'box_large',  label: 'Large\n(30kg)' },
+  { key: 'box_xlarge', label: 'XLarge\n(40kg)' },
 ];
 
 // Payment methods per PDF
@@ -101,6 +89,8 @@ export default function NewDeliveryScreen({ navigation }: Props) {
   const [dropoffLng, setDropoffLng] = useState(121.0244);
   const [packageCategory, setPackageCategory] = useState<PackageCategory>('pouch');
   const [sizePreset, setSizePreset] = useState('pouch_small');
+  const [boxType, setBoxType] = useState<BoxType>('own_box');
+  const [serviceType, setServiceType] = useState<ServiceType>('intra');
 
   // Step 2 state
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('alin_pay');
@@ -112,29 +102,24 @@ export default function NewDeliveryScreen({ navigation }: Props) {
   // Multi-step: 1 = address+package, 2 = price+payment
   const [step, setStep] = useState(1);
 
-  // Derived pricing from API estimate
-  const totalPrice = priceEstimate?.total_price ?? PACKAGE_PRICES[sizePreset] ?? 0;
-  // Extract display label for breakdown
-  const sizeLabel = [...POUCH_PRESETS, ...BOX_PRESETS].find(p => p.key === sizePreset)?.label ?? '';
+  // Derived pricing: use API estimate when available, otherwise look up rate card directly
+  const effectiveBoxType = packageCategory === 'pouch' ? 'alin_box' : boxType;
+  const totalPrice = priceEstimate?.total_price ?? getRateCardPrice(sizePreset, effectiveBoxType, serviceType);
+  const sizeLabel = [...POUCH_PRESETS, ...BOX_PRESETS].find(p => p.key === sizePreset)?.label?.replace('\n', ' ') ?? '';
   const categoryLabel = packageCategory === 'pouch' ? 'Pouch' : 'Box';
 
-  // When switching category, auto-select first preset
+  // When switching category, auto-select first preset and reset box type
   const handleCategoryChange = (cat: PackageCategory) => {
     setPackageCategory(cat);
-    if (cat === 'pouch') setSizePreset('pouch_small');
-    else setSizePreset('box_small');
+    if (cat === 'pouch') {
+      setSizePreset('pouch_small');
+      setBoxType('own_box'); // box type selection not shown for pouches
+    } else {
+      setSizePreset('box_1kg');
+    }
   };
 
   const presets = packageCategory === 'pouch' ? POUCH_PRESETS : BOX_PRESETS;
-
-  // Map region based on pickup/dropoff
-  const mapRegion = useMemo(() => {
-    const midLat = (pickupLat + dropoffLat) / 2;
-    const midLng = (pickupLng + dropoffLng) / 2;
-    const latDelta = Math.abs(pickupLat - dropoffLat) * 1.6 || 0.05;
-    const lngDelta = Math.abs(pickupLng - dropoffLng) * 1.6 || 0.05;
-    return { latitude: midLat, longitude: midLng, latitudeDelta: latDelta, longitudeDelta: lngDelta };
-  }, [pickupLat, pickupLng, dropoffLat, dropoffLng]);
 
   const handleNext = async () => {
     if (!pickupAddress.trim() || !dropoffAddress.trim()) {
@@ -152,6 +137,8 @@ export default function NewDeliveryScreen({ navigation }: Props) {
         dropoff_lng: dropoffLng,
         vehicle_type: 'motorcycle',
         package_size: sizePreset,
+        box_type: effectiveBoxType,
+        service_type: serviceType,
       });
       setPriceEstimate(estimate);
       setStep(2);
@@ -179,6 +166,7 @@ export default function NewDeliveryScreen({ navigation }: Props) {
         dropoff_lng: dropoffLng,
         package_description: `${categoryLabel} - ${sizeLabel}`,
         package_size: sizePreset,
+        box_type: packageCategory === 'box' ? boxType : 'own_box',
         total_price: totalPrice,
         payment_method: paymentMethod === 'cod' ? 'cod' : 'online',
       });
@@ -198,31 +186,13 @@ export default function NewDeliveryScreen({ navigation }: Props) {
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {/* Map */}
           <View style={styles.mapContainer}>
-            {MapView ? (
-              <MapView
-                style={styles.map}
-                region={mapRegion}
-                scrollEnabled={false}
-                zoomEnabled={false}
-                pitchEnabled={false}
-                rotateEnabled={false}
-              >
-                <Marker
-                  coordinate={{ latitude: pickupLat, longitude: pickupLng }}
-                  title="Pickup"
-                  pinColor="#3B82F6"
-                />
-                <Marker
-                  coordinate={{ latitude: dropoffLat, longitude: dropoffLng }}
-                  title="Dropoff"
-                  pinColor={Colors.danger}
-                />
-              </MapView>
-            ) : (
-              <View style={[styles.map, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#E8E5E0' }]}>
-                <Ionicons name="map-outline" size={48} color={Colors.textLight} />
-              </View>
-            )}
+            <LiveMap
+              pickupLat={pickupLat}
+              pickupLng={pickupLng}
+              dropoffLat={dropoffLat}
+              dropoffLng={dropoffLng}
+              height={180}
+            />
           </View>
 
           {/* Pickup Address */}
@@ -278,23 +248,85 @@ export default function NewDeliveryScreen({ navigation }: Props) {
             </View>
           </View>
 
-          {/* Size Preset */}
+          {/* Service Type */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Size Preset</Text>
-            <View style={styles.chipRow}>
-              {presets.map((p) => (
-                <TouchableOpacity
-                  key={p.key}
-                  style={[styles.chip, sizePreset === p.key && styles.chipActive]}
-                  onPress={() => setSizePreset(p.key)}
-                >
-                  <Text style={[styles.chipText, sizePreset === p.key && styles.chipTextActive]}>
-                    {p.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            <Text style={styles.sectionTitle}>Service Type</Text>
+            <View style={styles.toggleRow}>
+              <TouchableOpacity
+                style={[styles.toggleBtn, serviceType === 'intra' && styles.toggleBtnActive]}
+                onPress={() => setServiceType('intra')}
+              >
+                <Text style={[styles.toggleText, serviceType === 'intra' && styles.toggleTextActive]}>
+                  🏙️ Intra-region
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.toggleBtn, serviceType === 'cross' && styles.toggleBtnActive]}
+                onPress={() => setServiceType('cross')}
+              >
+                <Text style={[styles.toggleText, serviceType === 'cross' && styles.toggleTextActive]}>
+                  🚢 Cross-region
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
+
+          {/* Size Preset */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Size</Text>
+            <View style={styles.chipRow}>
+              {presets.map((p) => {
+                const price = getRateCardPrice(p.key, effectiveBoxType, serviceType);
+                return (
+                  <TouchableOpacity
+                    key={p.key}
+                    style={[styles.chip, sizePreset === p.key && styles.chipActive]}
+                    onPress={() => setSizePreset(p.key)}
+                  >
+                    <Text style={[styles.chipText, sizePreset === p.key && styles.chipTextActive]}>
+                      {p.label.replace('\n', '\n')}
+                    </Text>
+                    <Text style={[styles.chipPrice, sizePreset === p.key && styles.chipPriceActive]}>
+                      ₱{price.toLocaleString()}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Box Type — only shown when category is Box */}
+          {packageCategory === 'box' && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Box Type</Text>
+              <View style={styles.toggleRow}>
+                <TouchableOpacity
+                  style={[styles.toggleBtn, boxType === 'own_box' && styles.toggleBtnActive]}
+                  onPress={() => setBoxType('own_box')}
+                >
+                  <Text style={[styles.toggleText, boxType === 'own_box' && styles.toggleTextActive]}>
+                    🗃️ Own Box
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.toggleBtn, boxType === 'alin_box' && styles.toggleBtnActive]}
+                  onPress={() => setBoxType('alin_box')}
+                >
+                  <Text style={[styles.toggleText, boxType === 'alin_box' && styles.toggleTextActive]}>
+                    📦 ALiN Box
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.boxTypeHint}>
+                <Ionicons name="information-circle-outline" size={14} color={Colors.textSecondary} />
+                <Text style={styles.boxTypeHintText}>
+                  {boxType === 'alin_box'
+                    ? 'ALiN provides the packaging box. ALiN Box rates apply.'
+                    : 'You provide your own packaging box. Own Box rates apply.'}
+                </Text>
+              </View>
+            </View>
+          )}
         </ScrollView>
 
         {/* Next button pinned to bottom */}
@@ -340,31 +372,33 @@ export default function NewDeliveryScreen({ navigation }: Props) {
             />
           </TouchableOpacity>
 
-          {showBreakdown && priceEstimate && (
+          {showBreakdown && (
             <View style={styles.breakdownBody}>
               <View style={styles.breakdownRow}>
                 <View style={styles.breakdownLeft}>
                   <MaterialCommunityIcons name="package-variant" size={16} color={Colors.textSecondary} />
-                  <Text style={styles.breakdownLabel}>Base Fare</Text>
+                  <Text style={styles.breakdownLabel}>{categoryLabel} — {sizeLabel}</Text>
                 </View>
-                <Text style={styles.breakdownValue}>₱{priceEstimate.base_fare}</Text>
+                <Text style={styles.breakdownValue}>₱{totalPrice.toLocaleString()}</Text>
               </View>
               <View style={styles.breakdownRow}>
                 <View style={styles.breakdownLeft}>
-                  <MaterialCommunityIcons name="map-marker-distance" size={16} color={Colors.textSecondary} />
-                  <Text style={styles.breakdownLabel}>Distance ({priceEstimate.estimated_distance_km} km)</Text>
+                  <Ionicons name="swap-horizontal-outline" size={16} color={Colors.textSecondary} />
+                  <Text style={styles.breakdownLabel}>Service</Text>
                 </View>
-                <Text style={styles.breakdownValue}>₱{priceEstimate.distance_fare}</Text>
+                <Text style={styles.breakdownValue}>
+                  {(priceEstimate?.service_type ?? serviceType) === 'intra' ? 'Intra-region' : 'Cross-region'}
+                </Text>
               </View>
-              {priceEstimate.surge_multiplier > 1 && (
-                <View style={styles.breakdownRow}>
-                  <View style={styles.breakdownLeft}>
-                    <Ionicons name="trending-up" size={16} color={Colors.textSecondary} />
-                    <Text style={styles.breakdownLabel}>Surge (×{priceEstimate.surge_multiplier})</Text>
-                  </View>
-                  <Text style={styles.breakdownValue}>Applied</Text>
+              <View style={styles.breakdownRow}>
+                <View style={styles.breakdownLeft}>
+                  <MaterialCommunityIcons name="package-variant-closed" size={16} color={Colors.textSecondary} />
+                  <Text style={styles.breakdownLabel}>Box Type</Text>
                 </View>
-              )}
+                <Text style={styles.breakdownValue}>
+                  {effectiveBoxType === 'alin_box' ? 'ALiN Box' : 'Own Box'}
+                </Text>
+              </View>
             </View>
           )}
         </View>
@@ -449,12 +483,15 @@ const styles = StyleSheet.create({
   // Size preset chips
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
-    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20,
+    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12,
     backgroundColor: Colors.surface, borderWidth: 1.5, borderColor: Colors.border,
+    alignItems: 'center', minWidth: 72,
   },
   chipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  chipText: { fontSize: 13, fontWeight: '600', color: Colors.text },
+  chipText: { fontSize: 12, fontWeight: '600', color: Colors.text, textAlign: 'center' },
   chipTextActive: { color: Colors.textOnPrimary },
+  chipPrice: { fontSize: 11, fontWeight: '500', color: Colors.textSecondary, marginTop: 2 },
+  chipPriceActive: { color: Colors.textOnPrimary },
 
   // Bottom bar
   bottomBar: {
@@ -517,5 +554,24 @@ const styles = StyleSheet.create({
   },
   paymentLabel: { fontSize: 12, fontWeight: '500', color: Colors.textSecondary, flexShrink: 1 },
   paymentLabelActive: { color: Colors.primary, fontWeight: '600' },
+
+  // Box type hint
+  boxTypeHint: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginTop: 10,
+    backgroundColor: Colors.primaryBg,
+    borderRadius: 8,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: Colors.primaryBorder,
+  },
+  boxTypeHintText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    flexShrink: 1,
+    lineHeight: 18,
+  },
 });
 

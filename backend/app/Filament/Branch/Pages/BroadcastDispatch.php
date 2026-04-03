@@ -35,7 +35,7 @@ class BroadcastDispatch extends Page
 
     public static function shouldRegisterNavigation(): bool
     {
-        return static::canAccess();
+        return false; // Consolidated into OperationsMap
     }
 
     // ── Form state ─────────────────────────────────────────────

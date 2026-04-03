@@ -16,6 +16,8 @@ import TrackLookupScreen from '../screens/main/TrackLookupScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
 import SettingsScreen from '../screens/main/SettingsScreen';
 import NotificationsScreen from '../screens/main/NotificationsScreen';
+import SupportScreen from '../screens/support/SupportScreen';
+import SupportChatScreen from '../screens/support/SupportChatScreen';
 import Colors from '../theme/colors';
 
 // Stack for Home tab (includes Tracking as a nested screen)
@@ -23,7 +25,7 @@ export type HomeStackParamList = {
   HomeMain: undefined;
   NewDelivery: { deliveryType?: string };
   Tracking: { jobId: number };
-  TrackLookup: undefined;
+  TrackLookup: { initialQuery?: string } | undefined;
 };
 
 export type ProfileStackParamList = {
@@ -32,20 +34,28 @@ export type ProfileStackParamList = {
   Settings: undefined;
 };
 
+export type SupportStackParamList = {
+  SupportMain: undefined;
+  SupportChat: { conversationId: number | null; initialMessage?: string };
+};
+
 export type MainTabParamList = {
   HomeTab: undefined;
   History: undefined;
+  SupportTab: undefined;
   ProfileTab: undefined;
 };
 
-const Tab = createBottomTabNavigator<MainTabParamList>();
-const HomeStack = createNativeStackNavigator<HomeStackParamList>();
+const Tab          = createBottomTabNavigator<MainTabParamList>();
+const HomeStack    = createNativeStackNavigator<HomeStackParamList>();
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
+const SupportStack = createNativeStackNavigator<SupportStackParamList>();
 
 const TAB_ICONS: Record<string, { name: string; outline: string }> = {
-  HomeTab: { name: 'home', outline: 'home-outline' },
-  History: { name: 'document-text', outline: 'document-text-outline' },
-  ProfileTab: { name: 'person', outline: 'person-outline' },
+  HomeTab:    { name: 'home',                 outline: 'home-outline' },
+  History:    { name: 'document-text',         outline: 'document-text-outline' },
+  SupportTab: { name: 'chatbubble-ellipses',   outline: 'chatbubble-ellipses-outline' },
+  ProfileTab: { name: 'person',                outline: 'person-outline' },
 };
 
 function HomeStackNavigator() {
@@ -89,6 +99,30 @@ function HomeStackNavigator() {
         options={{ headerTitle: 'Track Shipment' }}
       />
     </HomeStack.Navigator>
+  );
+}
+
+function SupportStackNavigator() {
+  return (
+    <SupportStack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: '#FFFFFF' },
+        headerTintColor: Colors.text,
+        headerTitleStyle: { fontWeight: '600', color: Colors.text },
+        headerShadowVisible: true,
+      }}
+    >
+      <SupportStack.Screen
+        name="SupportMain"
+        component={SupportScreen}
+        options={{ headerTitle: 'Support' }}
+      />
+      <SupportStack.Screen
+        name="SupportChat"
+        component={SupportChatScreen}
+        options={{ headerTitle: 'Chat with Support' }}
+      />
+    </SupportStack.Navigator>
   );
 }
 
@@ -149,6 +183,11 @@ export default function MainNavigator() {
         name="History"
         component={HistoryScreen}
         options={{ headerTitle: 'Delivery History' }}
+      />
+      <Tab.Screen
+        name="SupportTab"
+        component={SupportStackNavigator}
+        options={{ headerShown: false, tabBarLabel: 'Support' }}
       />
       <Tab.Screen
         name="ProfileTab"

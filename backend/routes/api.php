@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\CustomerApiController;
+use App\Http\Controllers\Api\EmergencyController;
 use App\Http\Controllers\Api\RiderApiController;
+use App\Http\Controllers\Api\SupportController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -55,6 +57,14 @@ Route::middleware('supabase.auth')->group(function () {
 
         // Documents (KYC)
         Route::post('/documents', [RiderApiController::class, 'uploadDocument']);
+
+        // ── Emergency SOS ───────────────────────────────
+        Route::post('/emergency', [EmergencyController::class, 'trigger']);
+        Route::get('/emergency/active', [EmergencyController::class, 'myActiveAlert']);
+        Route::get('/emergency/nearby', [EmergencyController::class, 'nearby']);
+        Route::post('/emergency/{alert}/respond', [EmergencyController::class, 'respond']);
+        Route::post('/emergency/{alert}/resolve', [EmergencyController::class, 'resolve']);
+        Route::post('/emergency/{alert}/cancel', [EmergencyController::class, 'cancel']);
     });
 
     // ── Customer / Customer App API ──────────────────
@@ -75,7 +85,19 @@ Route::middleware('supabase.auth')->group(function () {
 
         // Driver location (for live tracking)
         Route::get('/bookings/{job}/driver-location', [CustomerApiController::class, 'driverLocation']);
+
+        // ── Customer Support ─────────────────────────────
+        Route::prefix('support')->group(function () {
+            Route::post('/start', [SupportController::class, 'start']);
+            Route::get('/conversations', [SupportController::class, 'conversations']);
+            Route::get('/conversations/{id}', [SupportController::class, 'show']);
+            Route::post('/conversations/{id}/message', [SupportController::class, 'message']);
+            Route::post('/conversations/{id}/close', [SupportController::class, 'close']);
+        });
     });
+
+    // ── Push Token (all authenticated users) ──────────
+    Route::put('/me/push-token', [SupportController::class, 'updatePushToken']);
 });
 
 Route::get('/health', function () {

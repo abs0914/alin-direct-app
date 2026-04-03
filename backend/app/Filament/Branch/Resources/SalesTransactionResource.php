@@ -15,9 +15,60 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 
+
+
 class SalesTransactionResource extends Resource
 {
     protected static ?string $model = SalesTransaction::class;
+
+    // ── ALiN Cargo Rate Card (PHP) ─────────────────────────────────────────────
+    // Structure: [size_key][box_type][service_type] = price
+    private const RATE_CARD = [
+        'box_xlarge'   => ['alin_box' => ['intra' => 3575, 'cross' => 3860], 'own_box' => ['intra' => 3145, 'cross' => 3400]],
+        'box_large'    => ['alin_box' => ['intra' => 2750, 'cross' => 2970], 'own_box' => ['intra' => 2420, 'cross' => 2615]],
+        'box_medium'   => ['alin_box' => ['intra' => 1690, 'cross' => 1850], 'own_box' => ['intra' => 1488, 'cross' => 1630]],
+        'box_small'    => ['alin_box' => ['intra' =>  900, 'cross' =>  980], 'own_box' => ['intra' =>  790, 'cross' =>  865]],
+        'box_5kg'      => ['alin_box' => ['intra' =>  285, 'cross' =>  320], 'own_box' => ['intra' =>  158, 'cross' =>  280]],
+        'box_3kg'      => ['alin_box' => ['intra' =>  180, 'cross' =>  205], 'own_box' => ['intra' =>  150, 'cross' =>  180]],
+        'box_1kg'      => ['alin_box' => ['intra' =>  120, 'cross' =>  140], 'own_box' => ['intra' =>  107, 'cross' =>  123]],
+        'pouch_large'  => ['alin_box' => ['intra' =>  160, 'cross' =>  190], 'own_box' => ['intra' =>  160, 'cross' =>  190]],
+        'pouch_medium' => ['alin_box' => ['intra' =>  145, 'cross' =>  175], 'own_box' => ['intra' =>  145, 'cross' =>  175]],
+        'pouch_small'  => ['alin_box' => ['intra' =>  115, 'cross' =>  135], 'own_box' => ['intra' =>  115, 'cross' =>  135]],
+        'pouch_xsmall' => ['alin_box' => ['intra' =>   75, 'cross' =>   90], 'own_box' => ['intra' =>   75, 'cross' =>   90]],
+    ];
+
+    /** Flat rate lookup; returns 0 when no matching entry. */
+    private static function lookupRate(string $size, string $boxType, string $serviceType): float
+    {
+        return (float) (self::RATE_CARD[$size][$boxType][$serviceType] ?? 0);
+    }
+
+    /** True when the selected service belongs to the ALiN Cargo category. */
+    private static function isAlinCargoService(?int $serviceId): bool
+    {
+        if (!$serviceId) {
+            return false;
+        }
+        $service = Service::with('category')->find($serviceId);
+        return $service?->category?->slug === 'alin-cargo';
+    }
+
+    /** Recalculate and set the amount field from current form state. */
+    private static function recalculateAmount(Forms\Set $set, Forms\Get $get): void
+    {
+        $size        = $get('package_size');
+        $boxType     = $get('box_type')     ?? 'own_box';
+        $serviceType = $get('service_type') ?? 'intra';
+
+        if (!$size) {
+            return;
+        }
+
+        $price = self::lookupRate($size, $boxType, $serviceType);
+        if ($price > 0) {
+            $set('amount', $price);
+        }
+    }
 
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
 
@@ -91,11 +142,68 @@ class SalesTransactionResource extends Resource
                     Forms\Components\Section::make('Transaction Details')
                         ->columnSpan(1)
                         ->schema([
+
+                            // ── ALiN Cargo fields (visible only when an ALiN Cargo service is selected) ──
+
+                            Forms\Components\Select::make('package_size')
+                                ->label('Package Size')
+                                ->options([
+                                    'Boxes' => [
+                                        'box_1kg'    => '📦 Box 1 kg',
+                                        'box_3kg'    => '📦 Box 3 kg',
+                                        'box_5kg'    => '📦 Box 5 kg',
+                                        'box_small'  => '📦 Box Small (10 kg)',
+                                        'box_medium' => '📦 Box Medium (20 kg)',
+                                        'box_large'  => '📦 Box Large (30 kg)',
+                                        'box_xlarge' => '📦 Box XLarge (40 kg)',
+                                    ],
+                                    'Pouches' => [
+                                        'pouch_xsmall' => '🛍️ Pouch XSmall (1 kg)',
+                                        'pouch_small'  => '🛍️ Pouch Small (2 kg)',
+                                        'pouch_medium' => '🛍️ Pouch Medium (3 kg)',
+                                        'pouch_large'  => '🛍️ Pouch Large (5 kg)',
+                                    ],
+                                ])
+                                ->live()
+                                ->afterStateUpdated(fn (Forms\Set $set, Forms\Get $get) => self::recalculateAmount($set, $get))
+                                ->visible(fn (Forms\Get $get) => self::isAlinCargoService((int) $get('service_id')))
+                                ->helperText('Select the size to auto-fill the rate-card price.'),
+
+                            Forms\Components\Select::make('service_type')
+                                ->label('Service Type')
+                                ->options([
+                                    'intra' => '🏙️ Intra-region',
+                                    'cross' => '🚢 Cross-region',
+                                ])
+                                ->default('intra')
+                                ->live()
+                                ->afterStateUpdated(fn (Forms\Set $set, Forms\Get $get) => self::recalculateAmount($set, $get))
+                                ->visible(fn (Forms\Get $get) => self::isAlinCargoService((int) $get('service_id'))),
+
+                            Forms\Components\Select::make('box_type')
+                                ->label('Box Type')
+                                ->options([
+                                    'own_box'  => '🗃️ Own Box (customer-provided)',
+                                    'alin_box' => '📦 ALiN Box (ALiN-provided)',
+                                ])
+                                ->default('own_box')
+                                ->live()
+                                ->afterStateUpdated(fn (Forms\Set $set, Forms\Get $get) => self::recalculateAmount($set, $get))
+                                ->visible(fn (Forms\Get $get) => self::isAlinCargoService((int) $get('service_id')))
+                                ->helperText(fn (Forms\Get $get) => $get('box_type') === 'alin_box'
+                                    ? 'ALiN provides the packaging. ALiN Box rates apply.'
+                                    : 'Customer provides their own packaging. Own Box rates apply.'),
+
+                            // ── Common fields ──
+
                             Forms\Components\TextInput::make('amount')
                                 ->numeric()
                                 ->prefix('₱')
                                 ->required()
-                                ->minValue(0.01),
+                                ->minValue(0.01)
+                                ->helperText(fn (Forms\Get $get) => self::isAlinCargoService((int) $get('service_id'))
+                                    ? 'Auto-filled from rate card. You may adjust if needed.'
+                                    : null),
                             Forms\Components\Select::make('payment_method')
                                 ->options([
                                     'cash' => 'Cash',
@@ -151,6 +259,46 @@ class SalesTransactionResource extends Resource
                         'bank_transfer' => 'primary',
                         default => 'gray',
                     }),
+                Tables\Columns\TextColumn::make('package_size')
+                    ->label('Size')
+                    ->formatStateUsing(fn (?string $state) => match ($state) {
+                        'box_xlarge'   => 'Box XLarge',
+                        'box_large'    => 'Box Large',
+                        'box_medium'   => 'Box Medium',
+                        'box_small'    => 'Box Small',
+                        'box_5kg'      => 'Box 5 kg',
+                        'box_3kg'      => 'Box 3 kg',
+                        'box_1kg'      => 'Box 1 kg',
+                        'pouch_large'  => 'Pouch L',
+                        'pouch_medium' => 'Pouch M',
+                        'pouch_small'  => 'Pouch S',
+                        'pouch_xsmall' => 'Pouch XS',
+                        default        => $state ?? '—',
+                    })
+                    ->toggleable()
+                    ->toggledHiddenByDefault(),
+                Tables\Columns\TextColumn::make('service_type')
+                    ->label('Route')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state) => match ($state) {
+                        'intra' => 'Intra',
+                        'cross' => 'Cross',
+                        default => '—',
+                    })
+                    ->color(fn (?string $state) => $state === 'cross' ? 'info' : 'gray')
+                    ->toggleable()
+                    ->toggledHiddenByDefault(),
+                Tables\Columns\TextColumn::make('box_type')
+                    ->label('Box Type')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state) => match ($state) {
+                        'own_box'  => '🗃️ Own Box',
+                        'alin_box' => '📦 ALiN Box',
+                        default    => '—',
+                    })
+                    ->color(fn (?string $state) => $state === 'alin_box' ? 'warning' : 'gray')
+                    ->toggleable()
+                    ->toggledHiddenByDefault(),
                 Tables\Columns\TextColumn::make('customer_name')
                     ->searchable()
                     ->toggleable(),

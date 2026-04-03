@@ -34,12 +34,31 @@ export interface Rider {
   user?: User;
 }
 
+export interface EmergencyAlert {
+  id: number;
+  rider_id: number;
+  branch_id: number | null;
+  lat: number | null;
+  lng: number | null;
+  status: 'active' | 'responding' | 'resolved' | 'cancelled';
+  emergency_job_id: number | null;
+  responded_by_rider_id: number | null;
+  notes: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+  rider?: Rider & { user?: User };
+  responded_by_rider?: Rider & { user?: User };
+  emergency_job?: DeliveryJob;
+}
+
 export interface DeliveryJob {
   id: number;
   tracking_uuid: string;
   sender_id: number | null;
   rider_id: number | null;
   branch_id: number;
+  is_emergency: boolean;
   status: JobStatus;
   vehicle_type: 'motorcycle' | 'mpv' | 'van' | 'truck';
   pickup_contact_name: string;

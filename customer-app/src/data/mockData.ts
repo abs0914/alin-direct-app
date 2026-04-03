@@ -4,7 +4,7 @@
 // MOCK: This entire file is mock data for demo purposes.
 // PRODUCTION: Remove this file; real data comes from Supabase/Laravel API.
 
-import { User, Customer, DeliveryJob, PriceEstimate } from '../types';
+import { User, Customer, DeliveryJob, PriceEstimate, ServiceType } from '../types';
 
 // ---- Mock User & Customer ----
 export const MOCK_USER: User = {
@@ -26,12 +26,23 @@ export const MOCK_CUSTOMER: Customer = {
   total_bookings: 12,
 };
 
-// ---- Pricing Tables (per vehicle type) ----
-export const PRICING: Record<string, { base_fare: number; per_km: number }> = {
-  motorcycle: { base_fare: 60, per_km: 15 },
-  mpv: { base_fare: 100, per_km: 20 },
-  van: { base_fare: 200, per_km: 25 },
-  truck: { base_fare: 500, per_km: 30 },
+// ---- ALiN Cargo Express — Sea & Land Rate Card ----
+// Source: official rate sheet (subject to change without prior notice)
+// Structure: RATE_CARD[sizeKey][boxType][serviceType] = price in PHP
+export type BoxType = 'own_box' | 'alin_box';
+export const RATE_CARD: Record<string, Record<BoxType, Record<ServiceType, number>>> = {
+  box_xlarge:   { alin_box: { intra: 3575, cross: 3860 }, own_box: { intra: 3145, cross: 3400 } },
+  box_large:    { alin_box: { intra: 2750, cross: 2970 }, own_box: { intra: 2420, cross: 2615 } },
+  box_medium:   { alin_box: { intra: 1690, cross: 1850 }, own_box: { intra: 1488, cross: 1630 } },
+  box_small:    { alin_box: { intra:  900, cross:  980 }, own_box: { intra:  790, cross:  865 } },
+  box_5kg:      { alin_box: { intra:  285, cross:  320 }, own_box: { intra:  158, cross:  280 } },
+  box_3kg:      { alin_box: { intra:  180, cross:  205 }, own_box: { intra:  150, cross:  180 } },
+  box_1kg:      { alin_box: { intra:  120, cross:  140 }, own_box: { intra:  107, cross:  123 } },
+  // Pouches are ALiN packaging — own_box mirrors alin_box (not applicable)
+  pouch_large:  { alin_box: { intra:  160, cross:  190 }, own_box: { intra:  160, cross:  190 } },
+  pouch_medium: { alin_box: { intra:  145, cross:  175 }, own_box: { intra:  145, cross:  175 } },
+  pouch_small:  { alin_box: { intra:  115, cross:  135 }, own_box: { intra:  115, cross:  135 } },
+  pouch_xsmall: { alin_box: { intra:   75, cross:   90 }, own_box: { intra:   75, cross:   90 } },
 };
 
 // ---- Mock Driver (assigned to active deliveries) ----
@@ -109,32 +120,24 @@ export const MOCK_JOB_HISTORY: DeliveryJob[] = [
   },
 ];
 
-// ---- Utility: Calculate Price Estimate ----
+// ---- Utility: Calculate Price Estimate (flat rate lookup) ----
 export function calculatePriceEstimate(
-  vehicleType: string,
-  pickupLat: number, pickupLng: number,
-  dropoffLat: number, dropoffLng: number,
+  sizeKey: string,
+  boxType: BoxType = 'own_box',
+  serviceType: ServiceType = 'intra',
 ): PriceEstimate {
-  // Haversine approximation for demo
-  const R = 6371;
-  const dLat = (dropoffLat - pickupLat) * Math.PI / 180;
-  const dLon = (dropoffLng - pickupLng) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 +
-    Math.cos(pickupLat * Math.PI / 180) * Math.cos(dropoffLat * Math.PI / 180) *
-    Math.sin(dLon / 2) ** 2;
-  const distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  const pricing = PRICING[vehicleType] ?? PRICING.motorcycle;
-  const surge = 1.0; // No surge for demo
-  const distanceFare = distance * pricing.per_km;
-  const total = (pricing.base_fare + distanceFare) * surge;
-
+  const sizeRates = RATE_CARD[sizeKey];
+  const flatRate = sizeRates ? sizeRates[boxType][serviceType] : 0;
   return {
-    base_fare: pricing.base_fare,
-    distance_fare: Math.round(distanceFare * 100) / 100,
-    surge_multiplier: surge,
-    total_price: Math.round(total * 100) / 100,
-    estimated_distance_km: Math.round(distance * 10) / 10,
+    flat_rate: flatRate,
+    service_type: serviceType,
+    total_price: flatRate,
+    // Legacy fields zeroed — no longer distance-based
+    base_fare: flatRate,
+    distance_fare: 0,
+    surge_multiplier: 1.0,
+    box_type_surcharge: 0,
+    estimated_distance_km: 0,
   };
 }
 

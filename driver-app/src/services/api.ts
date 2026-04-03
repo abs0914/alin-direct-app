@@ -8,7 +8,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { supabase } from '../lib/supabase';
 import Config from '../config';
-import { User, Rider, DeliveryJob, EarningsSummary } from '../types';
+import { User, Rider, DeliveryJob, EarningsSummary, EmergencyAlert } from '../types';
 import { MOCK_EARNINGS, MOCK_RIDER, MOCK_USER } from '../data/mockData';
 import {
   advanceJobStatus,
@@ -174,6 +174,38 @@ class ApiService {
       return { success: true, message: 'Payout request submitted.' };
     }
     const res = await this.client.post('/rider/payouts', { amount });
+    return res.data;
+  }
+
+  // ── Emergency SOS ─────────────────────────────────
+
+  async triggerEmergency(lat: number, lng: number, notes?: string): Promise<{ success: boolean; alert: EmergencyAlert }> {
+    const res = await this.client.post('/rider/emergency', { lat, lng, notes });
+    return res.data;
+  }
+
+  async getMyActiveEmergency(): Promise<{ alert: EmergencyAlert | null }> {
+    const res = await this.client.get('/rider/emergency/active');
+    return res.data;
+  }
+
+  async getNearbyEmergencies(): Promise<{ alerts: EmergencyAlert[] }> {
+    const res = await this.client.get('/rider/emergency/nearby');
+    return res.data;
+  }
+
+  async respondToEmergency(alertId: number): Promise<{ success: boolean; alert: EmergencyAlert; job: DeliveryJob | null }> {
+    const res = await this.client.post(`/rider/emergency/${alertId}/respond`);
+    return res.data;
+  }
+
+  async resolveEmergency(alertId: number): Promise<{ success: boolean; alert: EmergencyAlert }> {
+    const res = await this.client.post(`/rider/emergency/${alertId}/resolve`);
+    return res.data;
+  }
+
+  async cancelEmergency(alertId: number): Promise<{ success: boolean }> {
+    const res = await this.client.post(`/rider/emergency/${alertId}/cancel`);
     return res.data;
   }
 

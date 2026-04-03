@@ -11,6 +11,7 @@ import { User, Customer } from '../types';
 import { Session } from '@supabase/supabase-js';
 import { MOCK_USER, MOCK_CUSTOMER } from '../data/mockData';
 import { resetDemoState } from '../store/jobStore';
+import { resetSupportState } from '../store/supportStore';
 
 export const OTP_TEST_MODE = true; // Set to false when Supabase is running
 
@@ -162,8 +163,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await supabase.auth.signOut();
     }
 
-    // Reset in-memory demo delivery state for a clean next session
+    // Reset in-memory demo state for a clean next session
     resetDemoState();
+    resetSupportState();
 
     setState({
       user: null,

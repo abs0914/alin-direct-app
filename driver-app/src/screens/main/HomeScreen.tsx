@@ -4,7 +4,7 @@
 // MOCK: Subscribes to in-memory jobStore for offers & active job.
 // PRODUCTION: Replace with Supabase Realtime for job broadcasts.
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,8 @@ import {
   Switch,
   RefreshControl,
   ScrollView,
+  Alert,
+  Vibration,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -30,9 +32,23 @@ import {
   setActiveJob as storeSetActiveJob,
   setCurrentOffer,
 } from '../../store/jobStore';
+import {
+  addMyAlertListener,
+  removeMyAlertListener,
+  addNearbyAlertListener,
+  removeNearbyAlertListener,
+  startListeningForEmergencies,
+  stopListeningForEmergencies,
+  setMyActiveAlert,
+  notifyAlertResolved,
+  getMyActiveAlert,
+  NearbyAlertState,
+} from '../../store/emergencyStore';
+import { broadcastEmergencyLocation } from '../../services/firebase';
 import JobOfferModal from '../../components/JobOfferModal';
+import EmergencyAlertModal from '../../components/EmergencyAlertModal';
 import Colors from '../../theme/colors';
-import { DeliveryJob, EarningsSummary, JobOffer } from '../../types';
+import { DeliveryJob, EarningsSummary, JobOffer, EmergencyAlert } from '../../types';
 
 type Props = {
   navigation: NativeStackNavigationProp<HomeStackParamList, 'HomeMain'>;
@@ -55,6 +71,13 @@ export default function HomeScreen({ navigation }: Props) {
   const [currentOffer, setCurrentOfferState] = useState<JobOffer | null>(null);
   const [activeJob, setActiveJobState] = useState<DeliveryJob | null>(getActiveJob());
   const [earnings, setEarnings] = useState<EarningsSummary | null>(null);
+
+  // ── Emergency state ────────────────────────────────────────
+  const [myAlert, setMyAlertState] = useState<EmergencyAlert | null>(getMyActiveAlert());
+  const [nearbyAlerts, setNearbyAlertsState] = useState<NearbyAlertState[]>([]);
+  const [visibleNearbyAlert, setVisibleNearbyAlert] = useState<NearbyAlertState | null>(null);
+  const [isTriggeringSOS, setIsTriggeringSOS] = useState(false);
+  const locationRef = useRef<{ lat: number; lng: number } | null>(null);
 
   // Load earnings from API
   const loadEarnings = useCallback(async () => {
@@ -95,6 +118,131 @@ export default function HomeScreen({ navigation }: Props) {
     addJobListener(jobListener);
     return () => removeJobListener(jobListener);
   }, []);
+
+  // Subscribe to my own emergency alert changes
+  useEffect(() => {
+    const listener = (alert: EmergencyAlert | null) => setMyAlertState(alert);
+    addMyAlertListener(listener);
+    return () => removeMyAlertListener(listener);
+  }, []);
+
+  // Subscribe to nearby emergency alerts + start branch channel when online
+  useEffect(() => {
+    const listener = (alerts: NearbyAlertState[]) => {
+      setNearbyAlertsState(alerts);
+      // Show modal for the first active nearby alert (not already dismissed)
+      const firstActive = alerts.find(a => a.status === 'active' || a.status === 'responding');
+      if (firstActive && !myAlert) {
+        setVisibleNearbyAlert(prev => prev?.alert_id === firstActive.alert_id ? prev : firstActive);
+        Vibration.vibrate([0, 500, 200, 500]);
+      }
+    };
+    addNearbyAlertListener(listener);
+    return () => removeNearbyAlertListener(listener);
+  }, [myAlert]);
+
+  // Start/stop branch emergency channel with online status
+  useEffect(() => {
+    if (isOnline && rider?.branch_id) {
+      startListeningForEmergencies(rider.branch_id);
+    } else {
+      stopListeningForEmergencies();
+    }
+    return () => stopListeningForEmergencies();
+  }, [isOnline, rider?.branch_id]);
+
+  // ── SOS Handlers ──────────────────────────────────────────
+
+  const handleSOSTrigger = async () => {
+    if (!rider || rider.status !== 'approved') return;
+
+    Alert.alert(
+      '🆘 Trigger Emergency SOS?',
+      'This will alert your branch office and broadcast an emergency assistance job to nearby riders.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'SEND SOS',
+          style: 'destructive',
+          onPress: async () => {
+            setIsTriggeringSOS(true);
+            try {
+              const loc = locationRef.current;
+              const res = await api.triggerEmergency(
+                loc?.lat ?? 0,
+                loc?.lng ?? 0,
+                'SOS triggered from driver app.'
+              );
+              setMyActiveAlert(res.alert);
+              Vibration.vibrate([0, 300, 100, 300, 100, 300]);
+
+              // Broadcast to nearby riders via Supabase realtime channel
+              // so they receive the SOS without waiting for a poll.
+              if (rider?.branch_id) {
+                broadcastEmergencyLocation(
+                  rider.branch_id,
+                  res.alert.id,
+                  rider.id,
+                  {
+                    latitude: loc?.lat ?? 0,
+                    longitude: loc?.lng ?? 0,
+                    heading: 0,
+                    speed: 0,
+                    timestamp: Date.now(),
+                  }
+                );
+              }
+            } catch {
+              Alert.alert('Error', 'Could not send SOS. Please try again.');
+            } finally {
+              setIsTriggeringSOS(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleSOSCancel = async () => {
+    if (!myAlert) return;
+    Alert.alert(
+      'Cancel Emergency?',
+      'Mark this as a false alarm and cancel the emergency alert.',
+      [
+        { text: 'No' },
+        {
+          text: 'Yes, Cancel',
+          onPress: async () => {
+            try {
+              await api.cancelEmergency(myAlert.id);
+              if (rider?.branch_id) {
+                notifyAlertResolved(rider.branch_id, myAlert.id, 'cancelled');
+              } else {
+                setMyActiveAlert(null);
+              }
+            } catch {
+              Alert.alert('Error', 'Could not cancel the emergency.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleRespondToNearby = async () => {
+    if (!visibleNearbyAlert) return;
+    try {
+      const res = await api.respondToEmergency(visibleNearbyAlert.alert_id);
+      setVisibleNearbyAlert(null);
+      if (res.job) {
+        storeSetActiveJob(res.job);
+        navigation.navigate('ActiveJob', { jobId: res.job.id });
+      }
+    } catch {
+      Alert.alert('Error', 'Could not respond to the emergency.');
+      setVisibleNearbyAlert(null);
+    }
+  };
 
   const toggleOnline = async (value: boolean) => {
     setIsToggling(true);
@@ -241,6 +389,48 @@ export default function HomeScreen({ navigation }: Props) {
             </View>
           )}
         </View>
+
+        {/* ── SOS Emergency Section ──────────────────────────── */}
+        {rider?.status === 'approved' && isOnline && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Emergency</Text>
+
+            {myAlert ? (
+              /* Rider has an active SOS — show status */
+              <View style={styles.sosActiveCard}>
+                <View style={styles.sosActiveHeader}>
+                  <Text style={styles.sosActiveIcon}>🆘</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.sosActiveTitle}>SOS Active</Text>
+                    <Text style={styles.sosActiveStatus}>
+                      {myAlert.status === 'responding' ? '✅ A rider is on the way!' : '⏳ Waiting for a responder...'}
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity style={styles.sosCancelBtn} onPress={handleSOSCancel}>
+                  <Text style={styles.sosCancelText}>Cancel (False Alarm)</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              /* Normal state — show SOS button */
+              <TouchableOpacity
+                style={[styles.sosBtn, isTriggeringSOS && styles.sosBtnDisabled]}
+                onPress={handleSOSTrigger}
+                disabled={isTriggeringSOS}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.sosBtnIcon}>🆘</Text>
+                <View>
+                  <Text style={styles.sosBtnText}>EMERGENCY SOS</Text>
+                  <Text style={styles.sosBtnSubtext}>
+                    {activeJob ? 'Active job — SOS still available' : 'Tap to alert branch & nearby riders'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
       </ScrollView>
 
       {/* Job Offer Modal */}
@@ -249,6 +439,16 @@ export default function HomeScreen({ navigation }: Props) {
           offer={currentOffer}
           onAccept={handleAcceptOffer}
           onReject={handleRejectOffer}
+        />
+      )}
+
+      {/* Nearby Emergency Alert Modal */}
+      {visibleNearbyAlert && !myAlert && (
+        <EmergencyAlertModal
+          alert={visibleNearbyAlert}
+          alertData={visibleNearbyAlert.alertData}
+          onRespond={handleRespondToNearby}
+          onDismiss={() => setVisibleNearbyAlert(null)}
         />
       )}
     </>
@@ -282,5 +482,42 @@ const styles = StyleSheet.create({
   emptyCard: { backgroundColor: Colors.surface, borderRadius: 16, padding: 32, alignItems: 'center', borderWidth: 1, borderColor: Colors.border, borderStyle: 'dashed' },
   emptyText: { fontSize: 16, fontWeight: '600', color: Colors.text },
   emptySubtext: { fontSize: 13, color: Colors.textSecondary, marginTop: 4 },
+  // SOS
+  sosBtn: {
+    backgroundColor: Colors.danger,
+    borderRadius: 16,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    elevation: 4,
+    shadowColor: Colors.danger,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+  },
+  sosBtnDisabled: { opacity: 0.6 },
+  sosBtnIcon: { fontSize: 36 },
+  sosBtnText: { fontSize: 18, fontWeight: '800', color: '#fff', letterSpacing: 1 },
+  sosBtnSubtext: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
+  sosActiveCard: {
+    backgroundColor: Colors.dangerBg,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: Colors.danger,
+  },
+  sosActiveHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  sosActiveIcon: { fontSize: 32 },
+  sosActiveTitle: { fontSize: 16, fontWeight: '800', color: Colors.danger },
+  sosActiveStatus: { fontSize: 13, color: Colors.text, marginTop: 2 },
+  sosCancelBtn: {
+    borderWidth: 1,
+    borderColor: Colors.danger,
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  sosCancelText: { color: Colors.danger, fontSize: 14, fontWeight: '600' },
 });
 
