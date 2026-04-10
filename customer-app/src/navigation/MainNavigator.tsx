@@ -16,6 +16,7 @@ import TrackLookupScreen from '../screens/main/TrackLookupScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
 import SettingsScreen from '../screens/main/SettingsScreen';
 import NotificationsScreen from '../screens/main/NotificationsScreen';
+import InsuranceCardScreen from '../screens/main/InsuranceCardScreen';
 import SupportScreen from '../screens/support/SupportScreen';
 import SupportChatScreen from '../screens/support/SupportChatScreen';
 import Colors from '../theme/colors';
@@ -32,6 +33,7 @@ export type ProfileStackParamList = {
   ProfileMain: undefined;
   Notifications: undefined;
   Settings: undefined;
+  InsuranceCard: undefined;
 };
 
 export type SupportStackParamList = {
@@ -150,6 +152,11 @@ function ProfileStackNavigator() {
         name="Settings"
         component={SettingsScreen}
         options={{ headerTitle: 'Settings' }}
+      />
+      <ProfileStack.Screen
+        name="InsuranceCard"
+        component={InsuranceCardScreen}
+        options={{ headerTitle: 'My Insurance Card' }}
       />
     </ProfileStack.Navigator>
   );

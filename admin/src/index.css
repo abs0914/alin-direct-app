@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ALiN Move Brand Theme */
+    --background: 40 18% 97%;       /* #f8f7f5 warm off-white */
+    --foreground: 222 84% 11%;      /* #0F172A slate 900 */
+    --card: 0 0% 100%;              /* #FFFFFF */
+    --card-foreground: 222 84% 11%;
+    --primary: 37 91% 55%;          /* #f5a524 golden amber */
+    --primary-foreground: 21 92% 14%; /* #451a03 dark brown */
+    --secondary: 214 32% 91%;       /* #E2E8F0 slate 200 */
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;           /* #F1F5F9 slate 100 */
+    --muted-foreground: 215 16% 47%; /* #64748B slate 500 */
+    --accent: 39 92% 95%;           /* #FFFBEB amber 50 */
+    --accent-foreground: 21 92% 14%; /* #451a03 */
+    --destructive: 0 72% 51%;       /* #DC2626 */
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;          /* #E2E8F0 */
+    --input: 214 32% 91%;
+    --ring: 37 91% 55%;             /* #f5a524 */
+    --radius: 0.5rem;
+
+    /* Sidebar */
+    --sidebar: 0 0% 0%;             /* black sidebar */
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-active: 37 91% 55%;   /* amber active item */
+    --sidebar-active-foreground: 21 92% 14%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground; }
+}

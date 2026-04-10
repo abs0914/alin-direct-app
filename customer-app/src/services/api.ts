@@ -186,6 +186,58 @@ class ApiService {
     if (Config.DEMO_MODE) return;
     await this.client.put('/me/push-token', { expo_push_token: expoPushToken });
   }
+
+  // ── Personal Accident Insurance ───────────────────
+
+  async getInsurance(): Promise<{ insurance: PaiPolicy | null }> {
+    if (Config.DEMO_MODE) {
+      return {
+        insurance: {
+          id: 1,
+          policy_number: 'PAI-DEMO0001',
+          member_id: 'ALN-000001',
+          full_name: 'Juan dela Cruz',
+          nationality: 'Filipino',
+          mobile: '+63 912 345 6789',
+          email: 'juan@example.com',
+          date_of_birth: '1990-01-15',
+          address: 'Unit D6-D7 Jamestown, Mandaue City, Cebu',
+          beneficiaries: [{ name: 'Maria dela Cruz', relationship: 'Spouse' }],
+          valid_from: '2026-01-01',
+          valid_until: '2027-01-01',
+          validity_years: '2026–2027',
+          status: 'active',
+          is_active: true,
+          branch_name: 'Mandaue Main',
+          verify_url: 'http://localhost:8000/verify/pai/PAI-DEMO0001',
+          coverage: { death: 100000, murder: 10000, medical: 5000, burial: 5000 },
+        },
+      };
+    }
+    const res = await this.client.get('/customer/insurance');
+    return res.data;
+  }
+}
+
+export interface PaiPolicy {
+  id: number;
+  policy_number: string;
+  member_id: string;
+  full_name: string;
+  nationality: string;
+  mobile: string;
+  email: string;
+  date_of_birth: string;
+  address: string;
+  beneficiaries: { name: string; relationship: string }[] | null;
+  valid_from: string;
+  valid_until: string;
+  validity_years: string;
+  status: 'active' | 'expired' | 'cancelled';
+  is_active: boolean;
+  branch_name: string | null;
+  verify_url: string;
+  coverage: { death: number; murder: number; medical: number; burial: number };
 }
 
 export default new ApiService();

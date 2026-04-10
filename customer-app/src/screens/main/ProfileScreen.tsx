@@ -70,13 +70,14 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         {[
+          { iconName: 'shield-checkmark-outline' as const, label: 'My Insurance Card', action: () => navigation.navigate('InsuranceCard'), color: '#F5A010' },
           { iconName: 'notifications-outline' as const, label: 'Notifications', action: () => navigation.navigate('Notifications') },
           { iconName: 'settings-outline' as const, label: 'Settings', action: () => navigation.navigate('Settings') },
           { iconName: 'information-circle-outline' as const, label: 'About ALiN Move', action: () => Alert.alert('ALiN Move', 'Version 1.0.0\nFast & Reliable Delivery') },
         ].map((item, index) => (
           <TouchableOpacity key={index} style={styles.settingRow} onPress={item.action}>
             <View style={styles.settingIconBox}>
-              <Ionicons name={item.iconName} size={20} color={Colors.primary} />
+              <Ionicons name={item.iconName} size={20} color={(item as any).color ?? Colors.primary} />
             </View>
             <Text style={styles.settingLabel}>{item.label}</Text>
             <Ionicons name="chevron-forward" size={18} color={Colors.textLight} />

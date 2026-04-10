@@ -9,24 +9,25 @@ import { Platform } from 'react-native';
 // • Expo Web (browser on same machine)             → localhost
 //
 // ⚠️  When your network changes (e.g. different WiFi), update DEV_LAN_IP below.
-const DEV_LAN_IP = '192.168.0.141';
+// ⚠️ Update this if your machine's IP changes (run `ipconfig` to check)
+const DEV_LAN_IP = '26.213.230.75';
 
 const DEV_HOST = (() => {
   if (!__DEV__) return '';
   if (Platform.OS === 'web') return 'localhost';
-  return DEV_LAN_IP; // works for both physical Android and physical iOS
+  return DEV_LAN_IP; // works for physical Android/iOS on the same network
 })();
 
 const Config = {
-  // Demo Mode — set to false when Supabase + Laravel are running live
-  DEMO_MODE: true,
+  // Demo Mode — false = use real API & Supabase
+  DEMO_MODE: false,
 
-  // API Configuration
-  API_BASE_URL: __DEV__ ? `http://${DEV_HOST}:8000/api` : 'https://api.alinmove.com/api',
+  // API Configuration — points to the local Fastify API
+  API_BASE_URL: __DEV__ ? `http://${DEV_HOST}:3001/api` : 'https://api.alinmove.com/api',
 
   // Supabase Configuration
-  SUPABASE_URL: __DEV__ ? `http://${DEV_HOST}:6321` : 'https://YOUR_PROJECT_REF.supabase.co',
-  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0',
+  SUPABASE_URL: 'https://imewvxrqjgjkdtpyaijf.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltZXd2eHJxamdqa2R0cHlhaWpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3ODg5NDAsImV4cCI6MjA4MzM2NDk0MH0.cV7AK1tQKvCRmmOyxbBdL6jA6Px-bes0tWT6sOnUnuE',
 
   // OTP Configuration
   OTP_LENGTH: 6,

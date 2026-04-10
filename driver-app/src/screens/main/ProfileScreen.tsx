@@ -99,6 +99,7 @@ export default function ProfileScreen() {
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.infoCard}>
           {[
+            { icon: 'shield-checkmark-outline' as const, label: 'My Insurance Card', action: () => navigation.navigate('InsuranceCard') },
             { icon: 'folder-open-outline' as const, label: 'Documents (KYC)', action: () => navigation.navigate('DocumentUpload') },
             { icon: 'clipboard-outline' as const, label: 'Application Status', action: () => navigation.navigate('ApplicationStatus') },
             { icon: 'notifications-outline' as const, label: 'Notifications', action: () => navigation.navigate('Notifications') },

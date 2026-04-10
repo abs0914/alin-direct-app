@@ -1,0 +1,37 @@
+{
+  "name": "alin-api",
+  "version": "1.0.0",
+  "description": "ALiN Cargo Express - Node.js API (Fastify + Prisma)",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate deploy",
+    "db:studio": "prisma studio",
+    "db:seed": "tsx src/seed.ts",
+    "seed:admins": "tsx src/seed-admin-users.ts"
+  },
+  "dependencies": {
+    "@fastify/cors": "^9.0.0",
+    "@fastify/helmet": "^11.0.0",
+    "@fastify/jwt": "^8.0.0",
+    "@fastify/multipart": "^8.0.0",
+    "@fastify/websocket": "^10.0.0",
+    "@prisma/client": "^5.22.0",
+    "axios": "^1.7.0",
+    "fastify": "^4.28.0",
+    "jose": "^5.9.0",
+    "pino": "^9.0.0",
+    "pino-pretty": "^11.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "prisma": "^5.22.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

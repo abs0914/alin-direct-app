@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l \"c:\\\\Users\\\\USER\\\\ALiN Direct\\\\backend/app/Providers/Filament\"/*.php)",
+      "Bash(npm --version)",
+      "Bash(npx tsc:*)",
+      "Bash(npm install:*)",
+      "Bash(npx vite:*)",
+      "Bash(npx prisma:*)",
+      "Bash(DATABASE_URL=\"mysql://root:pass@localhost:3306/alin\" npx prisma validate)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:yT#9GMSk@YPMfLS@db.imewvxrqjgjkdtpyaijf.supabase.co:5432/postgres\" npx prisma validate)",
+      "Bash(npm run:*)"
+    ]
+  }
+}

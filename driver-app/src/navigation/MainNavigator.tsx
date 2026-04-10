@@ -18,6 +18,7 @@ import NotificationsScreen from '../screens/main/NotificationsScreen';
 import DocumentUploadScreen from '../screens/main/DocumentUploadScreen';
 import ApplicationStatusScreen from '../screens/main/ApplicationStatusScreen';
 import ProofOfDeliveryScreen from '../screens/main/ProofOfDeliveryScreen';
+import InsuranceCardScreen from '../screens/main/InsuranceCardScreen';
 import Colors from '../theme/colors';
 
 // Stack for Home tab
@@ -34,6 +35,7 @@ export type ProfileStackParamList = {
   Settings: undefined;
   DocumentUpload: undefined;
   ApplicationStatus: undefined;
+  InsuranceCard: undefined;
 };
 
 export type MainTabParamList = {
@@ -127,6 +129,11 @@ function ProfileStackNavigator() {
         name="ApplicationStatus"
         component={ApplicationStatusScreen}
         options={{ headerTitle: 'Application Status' }}
+      />
+      <ProfileStackNav.Screen
+        name="InsuranceCard"
+        component={InsuranceCardScreen}
+        options={{ headerTitle: 'My Insurance Card' }}
       />
     </ProfileStackNav.Navigator>
   );

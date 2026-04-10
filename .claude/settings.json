@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l \"c:\\\\Users\\\\USER\\\\ALiN Direct\\\\backend/app/Models\"/*.php)"
+    ]
+  }
+}
